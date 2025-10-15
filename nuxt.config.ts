@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { pwa } from './app/config/pwa'
 
 export default defineNuxtConfig({
@@ -16,7 +17,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
-    openaiApiKey: '',
+    openaiApiKey: process.env.NUXT_OPENAI_API_KEY ?? '',
   },
 
   future: {
