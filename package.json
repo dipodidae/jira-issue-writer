@@ -1,0 +1,62 @@
+{
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "scripts": {
+    "build": "nuxt build",
+    "dev:pwa": "VITE_PLUGIN_PWA=true nuxt dev",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "start": "node .output/server/index.mjs",
+    "start:generate": "npx serve .output/public",
+    "lint": "eslint .",
+    "typecheck": "nuxt typecheck",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "openai": "catalog:"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:dev",
+    "@commitlint/cli": "catalog:build",
+    "@commitlint/config-conventional": "catalog:build",
+    "@iconify-json/carbon": "catalog:icons",
+    "@iconify-json/twemoji": "catalog:icons",
+    "@nuxt/devtools": "catalog:build",
+    "@nuxt/eslint": "catalog:build",
+    "@nuxt/ui": "catalog:frontend",
+    "@pinia/nuxt": "catalog:build",
+    "@vite-pwa/nuxt": "catalog:build",
+    "@vueuse/core": "catalog:frontend",
+    "@vueuse/nuxt": "catalog:build",
+    "eslint": "catalog:dev",
+    "eslint-plugin-format": "catalog:dev",
+    "eslint-plugin-tailwindcss": "catalog:dev",
+    "lint-staged": "catalog:dev",
+    "nuxt": "catalog:build",
+    "pinia": "catalog:frontend",
+    "simple-git-hooks": "catalog:dev",
+    "tailwindcss": "catalog:dev",
+    "typescript": "catalog:dev",
+    "vue": "catalog:frontend",
+    "vue-tsc": "catalog:dev",
+    "zod": "catalog:frontend"
+  },
+  "resolutions": {
+    "@nuxt/devtools": "catalog:build",
+    "@nuxt/kit": "catalog:build",
+    "nuxt": "catalog:build",
+    "unplugin": "catalog:build",
+    "vite": "catalog:build"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "commit-msg": "npx commitlint --edit $1"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,json,md,css,yml}": [
+      "eslint --fix"
+    ]
+  }
+}

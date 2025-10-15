@@ -1,0 +1,77 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "editor.formatOnSave": false,
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "eslint.rules.customizations": [
+    {
+      "rule": "style/*",
+      "severity": "off"
+    },
+    {
+      "rule": "*-indent",
+      "severity": "off"
+    },
+    {
+      "rule": "*-spacing",
+      "severity": "off"
+    },
+    {
+      "rule": "*-spaces",
+      "severity": "off"
+    },
+    {
+      "rule": "*-order",
+      "severity": "off"
+    },
+    {
+      "rule": "*-dangle",
+      "severity": "off"
+    },
+    {
+      "rule": "*-newline",
+      "severity": "off"
+    },
+    {
+      "rule": "*quotes",
+      "severity": "off"
+    },
+    {
+      "rule": "*semi",
+      "severity": "off"
+    }
+  ],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "vue",
+    "html",
+    "markdown",
+    "json",
+    "jsonc",
+    "yaml"
+  ],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "iconify.annotations": true,
+  "iconify.inplace": true,
+  "interline-translate.knownPopularWordCount": 6000,
+  "prettier.enable": false,
+  "tailwindCSS.classAttributes": [
+    "class",
+    "ui"
+  ],
+  "tailwindCSS.experimental.classRegex": [
+    [
+      "ui:\\s*{([^)]*)\\s*}",
+      "(?:'|\"|`)([^']*)(?:'|\"|`)"
+    ]
+  ]
+}
