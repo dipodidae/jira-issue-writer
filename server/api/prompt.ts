@@ -105,10 +105,10 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
   // Validate API key format (should start with sk-)
   const apiKey = (config.openaiApiKey || process.env.NUXT_OPENAI_API_KEY || '').trim()
 
-  if (!apiKey.startsWith('sk-')) {
+  if (!apiKey) {
     throw createError({
       statusCode: 500,
-      message: 'Invalid OpenAI API key format. Key should start with "sk-"',
+      message: 'OpenAI API key is not configured. Set NUXT_OPENAI_API_KEY.',
     })
   }
 
