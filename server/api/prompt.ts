@@ -25,15 +25,18 @@ Always output valid JSON matching this schema:
 
 Guidelines:
 - Title: under 100 characters, always starts with [SCOPE].
-- Description: 3–6 sentences, clear and specific.
-- No markdown, code fences, or extra commentary.
+- Description: Use clear paragraphs separated by double newlines (\\n\\n). Structure it with:
+  • Problem statement (what is broken/needed)
+  • Context or impact (why it matters)
+  • Expected behavior (what should happen)
+- Use simple formatting: newlines for readability, but avoid markdown headers, code fences, or bullets.
 - Return raw JSON only.
 - Some scope labels are internal (e.g., "proactive-frame") — use them only when they directly explain *why* the problem occurs or where it must be fixed, not as filler context.
 
 Example:
 {
   "title": "[UI]: Dropdown flickers when opening user menu",
-  "description": "When clicking the user menu dropdown in the top bar, it flickers rapidly before stabilizing. This affects Chrome and Safari. Expected behavior: dropdown opens smoothly and remains stable until dismissed."
+  "description": "When clicking the user menu dropdown in the top bar, it flickers rapidly before stabilizing. This affects Chrome and Safari on both desktop and mobile.\n\nThe flickering creates a jarring user experience and makes the interface feel unpolished.\n\nExpected behavior: dropdown opens smoothly and remains stable until dismissed."
 }
 `.trim()
 
@@ -74,8 +77,6 @@ function validateJiraOutput(jiraTask: any): boolean {
   return hasValidTitle && hasValidDescription
 }
 
-// ---- Handler ---------------------------------------------------------------
-
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
   const config = useRuntimeConfig(event)
   const body = await readBody<PromptRequest>(event)
@@ -95,6 +96,14 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     throw createError({
       statusCode: 500,
       message: 'OpenAI API key not configured. Set NUXT_OPENAI_API_KEY.',
+    })
+  }
+
+  // Validate API key format (should start with sk-)
+  if (!config.openaiApiKey.startsWith('sk-')) {
+    throw createError({
+      statusCode: 500,
+      message: 'Invalid OpenAI API key format. Key should start with "sk-"',
     })
   }
 
@@ -175,6 +184,17 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
   }
   catch (err: any) {
     if (err instanceof OpenAI.APIError) {
+      if (err instanceof OpenAI.AuthenticationError) {
+        throw createError({
+          statusCode: 500,
+          message: 'Invalid OpenAI API key. Please check your NUXT_OPENAI_API_KEY environment variable.',
+          data: {
+            error: 'Authentication failed with OpenAI',
+            hint: 'Verify the API key is correct and active at https://platform.openai.com/api-keys',
+          },
+        })
+      }
+
       if (err instanceof OpenAI.RateLimitError) {
         const headers = err.headers
         throw createError({
