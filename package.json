@@ -15,7 +15,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "openai": "catalog:"
+    "openai": "catalog:frontend"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",

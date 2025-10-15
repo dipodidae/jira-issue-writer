@@ -59,6 +59,9 @@ catalogs:
     '@vueuse/core':
       specifier: ^13.9.0
       version: 13.9.0
+    openai:
+      specifier: ^6.3.0
+      version: 6.3.0
     pinia:
       specifier: ^3.0.3
       version: 3.0.3
@@ -88,7 +91,7 @@ importers:
   .:
     dependencies:
       openai:
-        specifier: ^6.3.0
+        specifier: catalog:frontend
         version: 6.3.0(ws@8.18.3)(zod@4.1.12)
     devDependencies:
       '@antfu/eslint-config':
