@@ -1,15 +1,18 @@
 import type { PromptRequest, PromptResponse } from '#shared/types/api'
+import process from 'node:process'
 import OpenAI from 'openai'
 
 let openaiClient: OpenAI | null = null
+let cachedApiKey: string | null = null
 
 function getOpenAIClient(apiKey: string) {
-  if (!openaiClient) {
+  if (!openaiClient || cachedApiKey !== apiKey) {
     openaiClient = new OpenAI({
       apiKey,
       maxRetries: 3,
       timeout: 30_000, // 30 seconds
     })
+    cachedApiKey = apiKey
   }
   return openaiClient
 }
@@ -100,14 +103,16 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
   }
 
   // Validate API key format (should start with sk-)
-  if (!config.openaiApiKey.startsWith('sk-')) {
+  const apiKey = (config.openaiApiKey || process.env.NUXT_OPENAI_API_KEY || '').trim()
+
+  if (!apiKey.startsWith('sk-')) {
     throw createError({
       statusCode: 500,
       message: 'Invalid OpenAI API key format. Key should start with "sk-"',
     })
   }
 
-  const openai = getOpenAIClient(config.openaiApiKey)
+  const openai = getOpenAIClient(apiKey)
 
   try {
     const baseMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
