@@ -43,6 +43,11 @@ Example:
 }
 `.trim()
 
+function logDebug(step: string, data: unknown) {
+  if (process.env.NODE_ENV !== 'production')
+    console.warn(`[api/prompt] ${step}`, data)
+}
+
 function JIRA_PROMPT_TEMPLATE(text: string, scopes: string[]) {
   const scopeContext = {
     'ui': 'User interface components, styling, and visual presentation.',
@@ -78,6 +83,142 @@ function validateJiraOutput(jiraTask: any): boolean {
   const hasValidDescription = jiraTask?.description && jiraTask.description.length >= 40
 
   return hasValidTitle && hasValidDescription
+}
+
+type ChatCompletionChoice = OpenAI.Chat.Completions.ChatCompletion.Choice
+
+function flattenMessageContent(content: any): string {
+  if (!content)
+    return ''
+  if (typeof content === 'string')
+    return content
+  if (Array.isArray(content))
+    return content.map(flattenMessageContent).join('')
+  if (typeof content === 'object') {
+    if (typeof content.text === 'string')
+      return content.text
+    if (Array.isArray(content.text))
+      return content.text.map(flattenMessageContent).join('')
+    if (typeof content.text?.value === 'string')
+      return content.text.value
+    if (Array.isArray(content.text?.content))
+      return content.text.content.map(flattenMessageContent).join('')
+    if (typeof content.content === 'string')
+      return content.content
+    if (Array.isArray(content.content))
+      return content.content.map(flattenMessageContent).join('')
+    if (typeof content.arguments === 'string')
+      return content.arguments
+  }
+  return ''
+}
+
+function sanitizeJsonCandidate(raw: string) {
+  const withoutFences = raw.replace(/```(json)?\n?/g, '').trim()
+  return escapeControlCharactersInJsonStrings(withoutFences).trim()
+}
+
+function extractJsonPayload(choice: ChatCompletionChoice | undefined) {
+  const message: any = choice?.message
+
+  if (!message)
+    return null
+
+  // Models can answer either via plain content or by invoking a tool call that carries JSON arguments.
+  const rawContent = flattenMessageContent(message.content)
+
+  if (rawContent && rawContent.trim()) {
+    const cleaned = sanitizeJsonCandidate(rawContent)
+    return {
+      raw: rawContent,
+      cleaned: cleaned || rawContent.trim(),
+    }
+  }
+
+  const toolCall = message.tool_calls?.find((call: any) =>
+    call?.type === 'function'
+    && typeof call.function?.arguments === 'string'
+    && call.function.arguments.trim(),
+  )
+
+  if (toolCall) {
+    const rawArgs = toolCall.function.arguments
+    const cleanedArgs = sanitizeJsonCandidate(rawArgs) || rawArgs.trim()
+    return { raw: rawArgs, cleaned: cleanedArgs }
+  }
+
+  const refusal = typeof message.refusal === 'string' ? message.refusal.trim() : ''
+
+  if (refusal) {
+    throw createError({
+      statusCode: 502,
+      message: `OpenAI refused to comply: ${refusal}`,
+    })
+  }
+
+  return null
+}
+
+function escapeControlCharactersInJsonStrings(jsonCandidate: string) {
+  let result = ''
+  let inString = false
+  let escapeNext = false
+
+  for (let i = 0; i < jsonCandidate.length; i++) {
+    const char = jsonCandidate[i]
+
+    if (!inString) {
+      result += char
+
+      if (char === '"')
+        inString = true
+
+      continue
+    }
+
+    if (escapeNext) {
+      result += char
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      result += char
+      escapeNext = true
+      continue
+    }
+
+    if (char === '"') {
+      result += char
+      inString = false
+      continue
+    }
+
+    if (char === '\n') {
+      result += '\\n'
+      continue
+    }
+
+    if (char === '\r') {
+      result += '\\r'
+      continue
+    }
+
+    if (char === '\t') {
+      result += '\\t'
+      continue
+    }
+
+    if (char < ' ') {
+      const hex = char.charCodeAt(0).toString(16).padStart(4, '0')
+      result += `\\u${hex}`
+      continue
+    }
+
+    result += char
+  }
+
+  return result
 }
 
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
@@ -128,23 +269,32 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
       })
 
     let response = await createCompletion(baseMessages)
-    let content = response.choices[0]?.message?.content?.trim()
+    let payload = extractJsonPayload(response.choices[0])
 
-    if (!content) {
+    logDebug('initial payload', {
+      hasChoice: Boolean(response.choices[0]),
+      rawPreview: payload?.raw?.slice(0, 160),
+      cleanedLength: payload?.cleaned?.length,
+    })
+
+    if (!payload?.cleaned) {
       throw createError({
         statusCode: 502,
         message: 'Empty response from OpenAI',
       })
     }
 
-    // Clean up and parse
-    let cleaned = content.replace(/```(json)?\n?/g, '').trim()
+    let cleaned = payload.cleaned
     let jiraTask: any
 
     try {
       jiraTask = JSON.parse(cleaned)
     }
     catch (parseErr: any) {
+      logDebug('parse error initial', {
+        error: parseErr?.message,
+        cleanedPreview: cleaned.slice(0, 160),
+      })
       throw createError({
         statusCode: 502,
         message: `Invalid JSON output from model: ${parseErr.message}`,
@@ -155,18 +305,46 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     if (!validateJiraOutput(jiraTask)) {
       const retryMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
         ...baseMessages,
-        { role: 'assistant', content } as OpenAI.Chat.Completions.ChatCompletionMessageParam,
-        { role: 'user', content: 'Your previous output did not follow the required JSON format. Please ensure you return a valid JSON object with "title" starting with [SCOPE]: and "description" fields. Return ONLY the JSON object, no markdown code fences.' } as OpenAI.Chat.Completions.ChatCompletionMessageParam,
       ]
-      response = await createCompletion(retryMessages)
-      content = response.choices[0]?.message?.content?.trim()
 
-      cleaned = content?.replace(/```(json)?\n?/g, '').trim() || ''
+      if (payload.raw) {
+        retryMessages.push({
+          role: 'assistant',
+          content: payload.raw,
+        })
+      }
+
+      retryMessages.push({
+        role: 'user',
+        content: 'Your previous output did not follow the required JSON format. Please ensure you return a valid JSON object with "title" starting with [SCOPE]: and "description" fields. Return ONLY the JSON object, no markdown code fences.',
+      })
+
+      response = await createCompletion(retryMessages)
+      payload = extractJsonPayload(response.choices[0])
+
+      logDebug('retry payload', {
+        hasChoice: Boolean(response.choices[0]),
+        rawPreview: payload?.raw?.slice(0, 160),
+        cleanedLength: payload?.cleaned?.length,
+      })
+
+      if (!payload?.cleaned) {
+        throw createError({
+          statusCode: 502,
+          message: 'Empty response from OpenAI on retry',
+        })
+      }
+
+      cleaned = payload.cleaned
 
       try {
         jiraTask = JSON.parse(cleaned)
       }
       catch (retryParseErr: any) {
+        logDebug('parse error retry', {
+          error: retryParseErr?.message,
+          cleanedPreview: cleaned.slice(0, 160),
+        })
         throw createError({
           statusCode: 502,
           message: `Invalid JSON output from model on retry: ${retryParseErr.message}`,
