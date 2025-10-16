@@ -55,7 +55,7 @@ const SCOPE_DESCRIPTIONS = {
 
 function buildPrompt(text: string, scopes: string[]) {
   const descriptions = scopes
-    .map(scopeKey => {
+    .map((scopeKey) => {
       const description = SCOPE_DESCRIPTIONS[scopeKey as keyof typeof SCOPE_DESCRIPTIONS]
       return `- ${scopeKey.toUpperCase()}: ${description ?? 'Scope description missing.'}`
     })
@@ -260,7 +260,7 @@ function buildRetryMessages(baseMessages: ChatMessage[], assistantRaw: string): 
   ]
 }
 
-async function generateJiraTask(params: { openai: OpenAI; agent: string; baseMessages: ChatMessage[] }) {
+async function generateJiraTask(params: { openai: OpenAI, agent: string, baseMessages: ChatMessage[] }) {
   const { openai, agent, baseMessages } = params
 
   const initialResult = await createChatCompletion(openai, agent, baseMessages)
