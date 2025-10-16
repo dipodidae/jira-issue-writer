@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import type { PromptResponse } from '#shared/types/api'
+interface GeneratedTask {
+  title: string
+  description: string
+}
 
 defineProps<{
-  data: PromptResponse
+  data: GeneratedTask
 }>()
 
 const open = defineModel<boolean>('open', { default: false })

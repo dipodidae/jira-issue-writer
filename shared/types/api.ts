@@ -2,20 +2,24 @@
  * API request and response types for the prompt endpoint
  */
 
+export type PromptStage = 'initial' | 'clarify'
+
 export interface PromptRequest {
   text: string
-  agent: string
-  scope: string[]
+  agent?: string
+  scope?: string[]
+  previousClarifications?: string[]
+  stage?: PromptStage
 }
 
-export interface JiraTask {
-  title: string
-  description: string
-}
+export type PromptStatus = 'done' | 'needs_info' | 'error'
 
 export interface PromptResponse {
-  title: string
-  description: string
+  status: PromptStatus
+  title?: string
+  description?: string
+  reason?: string
+  missingInfoPrompt?: string
 }
 
 /**

@@ -4,11 +4,19 @@ import OpenAI from 'openai'
 
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam
 type ChatChoice = OpenAI.Chat.Completions.ChatCompletion.Choice
-type CompletionStage = 'initial' | 'retry'
+type CompletionStage = 'initial' | 'retry' | 'sufficiency' | 'sufficiency-retry'
 
 interface CompletionPayload {
   raw: string
   cleaned: string
+}
+
+type SufficiencyStatus = 'enough' | 'not_enough'
+
+interface SufficiencyResult {
+  status: SufficiencyStatus
+  reason?: string
+  missing_info_prompt?: string
 }
 
 interface JiraTask {
@@ -28,23 +36,30 @@ function getOpenAIClient(apiKey: string) {
 }
 
 const SYSTEM_PROMPT = `
-You are a Jira expert who creates concise, developer-actionable issues.
-Always output valid JSON matching this schema:
-{
-  "title": "[SCOPE]: short, concrete summary of the problem or task",
-  "description": "Detailed, factual context explaining what is wrong, why it matters, and what should happen instead."
-}
+You are a Jira co-pilot AI assistant helping users turn rough notes into developer-actionable Jira issues.
+
+Follow this process:
+1. Evaluate whether the provided information is sufficient to create a high-quality Jira issue.
+   - If anything critical is missing, respond with {"status":"not_enough","reason":"why the input is insufficient","missing_info_prompt":"concise clarifying question"}.
+2. When the information is sufficient, respond with {"status":"enough","title":"[SCOPE]: short, concrete summary","description":"Detailed, factual explanation of the problem, its impact, and the expected outcome."}.
+
 Guidelines:
-- Title: under 100 characters, always starts with [SCOPE].
-- Description: Use clear paragraphs separated by \n\n.
-- Structure the description with:
-  • Problem statement (what is broken/needed)
-  • Context or impact (why it matters)
-  • Expected behavior (what should happen)
-- Avoid markdown formatting, bullet lists, and code fences.
-- Return raw JSON only.
-- Some scope labels are internal (e.g., "proactive-frame") — only include them when they explain the cause or fix location.
+- Title stays under 100 characters and always begins with [SCOPE]. When multiple scopes apply, join them with + (e.g., [UI+API]).
+- Description uses plain text paragraphs separated by \n\n and covers problem, impact, and expected outcome.
+- Avoid bullet lists, markdown formatting, and code fences.
+- Use product terminology from the context when it improves clarity and avoid speculation.
+- Always return valid JSON with double quotes and no trailing commentary.
 `.trim()
+
+const SUFFICIENCY_SYSTEM_PROMPT = `
+You are evaluating whether the provided context is sufficient to draft a high-quality Jira issue.
+Return a JSON object only.
+- If the information is sufficient, respond with {"status":"enough"}.
+- If the information is insufficient, respond with {"status":"not_enough","reason":"short explanation","missing_info_prompt":"single clarifying question"}.
+The missing_info_prompt must be a single, specific question that references relevant product terms when available.
+`.trim()
+
+const MAX_CLARIFICATION_ROUNDS = 3
 
 const SCOPE_DESCRIPTIONS = {
   'ui': 'User interface components, styling, and visual presentation.',
@@ -74,6 +89,23 @@ ${descriptions}
 
 Write a Jira issue describing the problem and expected outcome.
 Prefix the title with [${prefix}].
+`.trim()
+}
+
+function buildSufficiencyPrompt(text: string, clarifications: string[], scopes: string[]) {
+  const clarificationsBlock = clarifications.length
+    ? `Additional clarifications provided so far:\n${clarifications.map((entry, index) => `${index + 1}. ${entry}`).join('\n')}`
+    : 'No additional clarifications have been collected yet.'
+
+  return `
+User provided notes:
+${text}
+
+${clarificationsBlock}
+
+Relevant scopes: ${scopes.join(', ')}
+
+Decide if this information is enough to write a high-quality Jira issue.
 `.trim()
 }
 
@@ -226,6 +258,34 @@ function parseJiraTask(payload: CompletionPayload, stage: CompletionStage): Jira
   }
 }
 
+function parseSufficiencyResult(payload: CompletionPayload, stage: CompletionStage): SufficiencyResult {
+  try {
+    return JSON.parse(payload.cleaned) as SufficiencyResult
+  }
+  catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown JSON parse error'
+    logDebug(`${stage} sufficiency parse error`, {
+      error: message,
+      cleanedPreview: payload.cleaned.slice(0, 160),
+    })
+    throw createError({ statusCode: 502, message: `Invalid JSON from model (${stage}): ${message}` })
+  }
+}
+
+function ensureValidSufficiency(result: SufficiencyResult, stage: CompletionStage) {
+  if (result.status === 'enough')
+    return
+
+  if (result.status === 'not_enough' && result.missing_info_prompt)
+    return
+
+  throw createError({
+    statusCode: 502,
+    message: `AI sufficiency check missing required fields during ${stage} stage.`,
+    data: result,
+  })
+}
+
 function isValidJiraTask(candidate: JiraTask | null | undefined): candidate is JiraTask {
   if (!candidate)
     return false
@@ -260,6 +320,17 @@ function buildRetryMessages(baseMessages: ChatMessage[], assistantRaw: string): 
   ]
 }
 
+function buildSufficiencyRetryMessages(baseMessages: ChatMessage[], assistantRaw: string): ChatMessage[] {
+  return [
+    ...baseMessages,
+    { role: 'assistant', content: assistantRaw },
+    {
+      role: 'user',
+      content: 'Return only a JSON object with status and, when status is "not_enough", include reason and missing_info_prompt.',
+    },
+  ]
+}
+
 async function generateJiraTask(params: { openai: OpenAI, agent: string, baseMessages: ChatMessage[] }) {
   const { openai, agent, baseMessages } = params
 
@@ -278,19 +349,57 @@ async function generateJiraTask(params: { openai: OpenAI, agent: string, baseMes
   return jiraTask
 }
 
+async function checkInformationSufficiency(params: {
+  openai: OpenAI
+  agent: string
+  text: string
+  scope: string[]
+  clarifications: string[]
+}) {
+  const { openai, agent, text, scope, clarifications } = params
+  const messages: ChatMessage[] = [
+    { role: 'system', content: SUFFICIENCY_SYSTEM_PROMPT },
+    { role: 'user', content: buildSufficiencyPrompt(text, clarifications, scope) },
+  ]
+
+  const initialResult = await openai.chat.completions.create({
+    model: agent,
+    messages,
+    max_completion_tokens: 300,
+  })
+  let payload = extractCompletionPayload(initialResult.choices[0], 'sufficiency')
+  let result = parseSufficiencyResult(payload, 'sufficiency')
+  ensureValidSufficiency(result, 'sufficiency')
+
+  if (result.status === 'enough' || result.missing_info_prompt)
+    return result
+
+  const retryMessages = buildSufficiencyRetryMessages(messages, payload.raw)
+
+  const retryResult = await openai.chat.completions.create({
+    model: agent,
+    messages: retryMessages,
+    max_completion_tokens: 300,
+  })
+  payload = extractCompletionPayload(retryResult.choices[0], 'sufficiency-retry')
+  result = parseSufficiencyResult(payload, 'sufficiency-retry')
+  ensureValidSufficiency(result, 'sufficiency-retry')
+  return result
+}
+
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
   const config = useRuntimeConfig(event)
   const body = await readBody<PromptRequest>(event)
 
   const trimmedText = body?.text?.trim()
   const agent = body?.agent ?? 'gpt-5-mini'
-  const scope = body?.scope ?? ['ui']
+  const scope = Array.isArray(body?.scope) && body.scope.length ? body.scope : ['ui']
+  const previousClarifications = Array.isArray(body?.previousClarifications)
+    ? body.previousClarifications.map(entry => entry?.toString?.().trim()).filter((entry): entry is string => Boolean(entry))
+    : []
 
   if (!trimmedText)
     throw createError({ statusCode: 400, message: 'No text provided' })
-
-  if (!Array.isArray(scope) || scope.length === 0)
-    throw createError({ statusCode: 400, message: 'At least one scope required' })
 
   const apiKey = (config.openaiApiKey || process.env.NUXT_OPENAI_API_KEY || '').trim()
   if (!apiKey)
@@ -298,14 +407,39 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
 
   const client = getOpenAIClient(apiKey)
   const normalizedText = trimmedText.replace(/\s+/g, ' ')
+
+  const sufficiency = await checkInformationSufficiency({
+    openai: client,
+    agent,
+    text: normalizedText,
+    scope,
+    clarifications: previousClarifications,
+  })
+
+  if (sufficiency.status === 'not_enough') {
+    if (previousClarifications.length >= MAX_CLARIFICATION_ROUNDS) {
+      return {
+        status: 'error',
+        reason: `Reached the maximum number of clarification rounds (${MAX_CLARIFICATION_ROUNDS}).`,
+      }
+    }
+
+    return {
+      status: 'needs_info',
+      reason: sufficiency.reason || 'More detail is required to draft a useful Jira issue.',
+      missingInfoPrompt: sufficiency.missing_info_prompt || 'What additional details would clarify the issue?',
+    }
+  }
+
+  const fullContext = [normalizedText, ...previousClarifications].join('\n\n')
   const baseMessages: ChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: buildPrompt(normalizedText, scope) },
+    { role: 'user', content: buildPrompt(fullContext, scope) },
   ]
 
   try {
     const jiraTask = await generateJiraTask({ openai: client, agent, baseMessages })
-    return { title: jiraTask.title, description: jiraTask.description }
+    return { status: 'done', title: jiraTask.title, description: jiraTask.description }
   }
   catch (error: unknown) {
     if (error instanceof OpenAI.APIError) {

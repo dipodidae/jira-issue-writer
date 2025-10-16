@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PromptResponse } from '#shared/types/api'
+import type { PromptResponse, PromptStage } from '#shared/types/api'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
@@ -18,7 +18,13 @@ const state = reactive<Partial<Schema>>({
 })
 
 const toast = useToast()
-const modalOpen = ref(false)
+const taskModalOpen = ref(false)
+const clarificationModalOpen = ref(false)
+
+const taskResult = ref<{ title: string, description: string } | null>(null)
+const clarificationPrompt = ref('')
+const previousClarifications = ref<string[]>([])
+const currentStage = ref<PromptStage>('initial')
 
 // Use useFetch with immediate: false - extract refs directly
 const { data, error, status, execute } = await useFetch<PromptResponse>('/api/prompt', {
@@ -27,6 +33,8 @@ const { data, error, status, execute } = await useFetch<PromptResponse>('/api/pr
     text: state.prompt,
     agent: state.agent,
     scope: state.scope,
+    previousClarifications: previousClarifications.value,
+    stage: currentStage.value,
   })),
   immediate: false,
   watch: false,
@@ -39,26 +47,106 @@ const errorMessage = computed(() => {
   return error.value?.data?.message || error.value?.message || 'An unexpected error occurred'
 })
 
-async function onSubmit(_event: FormSubmitEvent<Schema>) {
-  // Execute the fetch
+function resetForInitialRequest() {
+  currentStage.value = 'initial'
+  previousClarifications.value = []
+  clarificationModalOpen.value = false
+  clarificationPrompt.value = ''
+  taskModalOpen.value = false
+}
+
+function handleNeedsInfo(response: PromptResponse) {
+  clarificationPrompt.value = response.missingInfoPrompt || 'What additional details would clarify the issue?'
+  clarificationModalOpen.value = true
+  taskModalOpen.value = false
+
+  if (response.reason) {
+    toast.add({
+      title: 'More information needed',
+      description: response.reason,
+      color: 'warning',
+    })
+  }
+}
+
+function handleDone(response: PromptResponse) {
+  if (!response.title || !response.description) {
+    toast.add({
+      title: 'Incomplete response',
+      description: 'The assistant response was missing required fields.',
+      color: 'error',
+    })
+    return
+  }
+
+  taskResult.value = {
+    title: response.title,
+    description: response.description,
+  }
+  taskModalOpen.value = true
+  clarificationModalOpen.value = false
+
+  toast.add({
+    title: 'Success',
+    description: 'Jira task generated successfully!',
+    color: 'success',
+  })
+}
+
+function handleResponse(response: PromptResponse) {
+  if (response.status === 'done') {
+    handleDone(response)
+  }
+  else if (response.status === 'needs_info') {
+    handleNeedsInfo(response)
+  }
+  else if (response.status === 'error') {
+    const reason = response.reason || 'The assistant cannot continue without more information.'
+    toast.add({
+      title: 'Assistant error',
+      description: reason,
+      color: 'error',
+    })
+  }
+  else {
+    toast.add({
+      title: 'Unexpected response',
+      description: 'Received an unknown status from the assistant.',
+      color: 'error',
+    })
+  }
+}
+
+async function runPrompt() {
   await execute()
 
-  // Handle response using extracted refs
   if (error.value) {
     toast.add({
       title: 'Error',
       description: errorMessage.value || 'An error occurred',
       color: 'error',
     })
+    return
   }
-  else if (data.value) {
-    toast.add({
-      title: 'Success',
-      description: 'Jira task generated successfully!',
-      color: 'success',
-    })
-    modalOpen.value = true
-  }
+
+  if (data.value)
+    handleResponse(data.value)
+}
+
+async function onSubmit(_event: FormSubmitEvent<Schema>) {
+  taskResult.value = null
+  resetForInitialRequest()
+
+  await runPrompt()
+}
+
+async function submitClarification(message: string) {
+  previousClarifications.value = [...previousClarifications.value, message]
+  currentStage.value = 'clarify'
+  clarificationModalOpen.value = false
+  taskResult.value = null
+
+  await runPrompt()
 }
 </script>
 
@@ -104,6 +192,12 @@ async function onSubmit(_event: FormSubmitEvent<Schema>) {
       <UAlert color="error" :title="errorMessage" />
     </div>
 
-    <ModalJiraTask v-if="data" v-model:open="modalOpen" :data="data" />
+    <ModalJiraTask v-if="taskResult" v-model:open="taskModalOpen" :data="taskResult" />
+    <ModalClarificationPrompt
+      v-model:open="clarificationModalOpen"
+      :prompt="clarificationPrompt"
+      :loading="status === 'pending'"
+      @submit="submitClarification"
+    />
   </div>
 </template>
