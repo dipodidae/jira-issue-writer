@@ -6,3 +6,8 @@ declare module 'nuxt/schema' {
 
 // It is always important to ensure you import/export something when augmenting a type
 export {}
+
+declare module '*.md?raw' {
+  const content: string
+  export default content
+}

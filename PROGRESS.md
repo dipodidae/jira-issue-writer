@@ -31,4 +31,5 @@
 - Populated `AppHeader` with explicit navigation metadata, preventing the undefined `items` warning and linking directly to the README and GitHub repository.
 - Next step: reload the app with devtools open to confirm the accessibility warnings no longer appear.
 
-```
+- Extracted OpenAI prompt bodies into markdown templates under `server/prompts/`, enabling easier editing with IDE highlighting while keeping runtime interpolation via helper functions.
+- Next step: consider unit tests around template rendering to catch missing placeholders when prompt contracts evolve.
