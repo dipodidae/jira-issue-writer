@@ -4,6 +4,11 @@ import type { AgentsResponse } from '#shared/types/api'
 const AGENTS_BY_TIER = {
   free: [
     {
+      label: 'GPT-4o Mini',
+      value: 'gpt-4o-mini',
+      icon: 'i-lucide-zap',
+    },
+    {
       label: 'GPT-5 Mini',
       value: 'gpt-5-mini',
       icon: 'i-lucide-zap',
@@ -11,30 +16,30 @@ const AGENTS_BY_TIER = {
   ],
   pro: [
     {
-      label: 'GPT-5 Mini',
-      value: 'gpt-5-mini',
+      label: 'GPT-4o Mini',
+      value: 'gpt-4o-mini',
       icon: 'i-lucide-zap',
     },
     {
-      label: 'GPT-5',
-      value: 'gpt-5',
+      label: 'GPT-4o',
+      value: 'gpt-4o',
       icon: 'i-lucide-sparkles',
     },
   ],
   enterprise: [
     {
-      label: 'GPT-5 Mini',
-      value: 'gpt-5-mini',
+      label: 'GPT-4o Mini',
+      value: 'gpt-4o-mini',
       icon: 'i-lucide-zap',
-    },
-    {
-      label: 'GPT-5',
-      value: 'gpt-5',
-      icon: 'i-lucide-sparkles',
     },
     {
       label: 'GPT-4o',
       value: 'gpt-4o',
+      icon: 'i-lucide-sparkles',
+    },
+    {
+      label: 'o1-mini',
+      value: 'o1-mini',
       icon: 'i-lucide-brain',
     },
   ],

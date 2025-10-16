@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import type { PromptResponse, PromptStage } from '#shared/types/api'
+import type { IssueType, PromptResponse, PromptStage } from '#shared/types/api'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
+
+const issueContextDescription = 'Share the relevant context, observed behaviour, expected outcome, and any reproduction steps so the agent can draft a complete Jira ticket.'
 
 const schema = z.object({
   prompt: z.string().min(1, 'Issue context cannot be empty'),
@@ -13,7 +15,7 @@ type Schema = z.output<typeof schema>
 
 const state = reactive<Partial<Schema>>({
   prompt: '',
-  agent: 'gpt-5-mini',
+  agent: 'gpt-4o-mini',
   scope: ['ui'],
 })
 
@@ -21,7 +23,7 @@ const toast = useToast()
 const taskModalOpen = ref(false)
 const clarificationModalOpen = ref(false)
 
-const taskResult = ref<{ title: string, description: string } | null>(null)
+const taskResult = ref<{ title: string, description: string, issueType: IssueType } | null>(null)
 const clarificationPrompt = ref('')
 const previousClarifications = ref<string[]>([])
 const currentStage = ref<PromptStage>('initial')
@@ -70,10 +72,10 @@ function handleNeedsInfo(response: PromptResponse) {
 }
 
 function handleDone(response: PromptResponse) {
-  if (!response.title || !response.description) {
+  if (!response.title || !response.description || !response.issueType) {
     toast.add({
       title: 'Incomplete response',
-      description: 'The assistant response was missing required fields.',
+      description: 'The assistant response was missing required fields (title, description, or issueType).',
       color: 'error',
     })
     return
@@ -82,6 +84,7 @@ function handleDone(response: PromptResponse) {
   taskResult.value = {
     title: response.title,
     description: response.description,
+    issueType: response.issueType,
   }
   taskModalOpen.value = true
   clarificationModalOpen.value = false
@@ -161,7 +164,11 @@ async function submitClarification(message: string) {
     />
 
     <UForm :schema="schema" :state="state" @submit="onSubmit">
-      <UFormField label="Issue Context" name="prompt">
+      <UFormField
+        label="Issue Context"
+        name="prompt"
+        :description="issueContextDescription"
+      >
         <UTextarea
           v-model="state.prompt"
           placeholder="Describe the issue, bug, or feature request..."
@@ -177,8 +184,8 @@ async function submitClarification(message: string) {
           <UFormField label="Agent" name="agent">
             <DropdownAgents v-model="state.agent" />
           </UFormField>
-          <UButton type="submit" :loading="status === 'pending'" :disabled="status === 'pending'">
-            Generate Jira Task
+          <UButton icon="mdi:arrow-right" type="submit" :loading="status === 'pending'" :disabled="status === 'pending'">
+            Generate
           </UButton>
         </div>
       </div>

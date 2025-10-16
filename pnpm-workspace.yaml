@@ -1,3 +1,5 @@
+catalog:
+  '@nuxtjs/mdc': 0.18.0
 catalogs:
   build:
     '@commitlint/cli': ^20.1.0
@@ -23,6 +25,7 @@ catalogs:
     vue-tsc: ^3.1.1
   frontend:
     '@nuxt/ui': ^4.0.1
+    '@nuxtjs/mdc': ^0.18.0
     '@vueuse/core': ^13.9.0
     openai: ^6.3.0
     pinia: ^3.0.3
@@ -35,6 +38,7 @@ catalogs:
 onlyBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'
+  - better-sqlite3
   - esbuild
   - simple-git-hooks
   - unrs-resolver

@@ -4,6 +4,18 @@
 
 export type PromptStage = 'initial' | 'clarify'
 
+export type IssueType
+  = | 'bug'
+    | 'story'
+    | 'task'
+    | 'spike'
+    | 'technical_debt'
+    | 'epic'
+    | 'improvement'
+    | 'chore'
+    | 'qa'
+    | 'documentation'
+
 export interface PromptRequest {
   text: string
   agent?: string
@@ -18,6 +30,7 @@ export interface PromptResponse {
   status: PromptStatus
   title?: string
   description?: string
+  issueType?: IssueType
   reason?: string
   missingInfoPrompt?: string
 }

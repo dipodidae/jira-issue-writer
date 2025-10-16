@@ -5,11 +5,12 @@ const nitroPreset = process.env.VERCEL ? 'vercel' : 'netlify'
 
 export default defineNuxtConfig({
   modules: [
-    '@vueuse/nuxt',
-    '@pinia/nuxt',
-    '@vite-pwa/nuxt',
     '@nuxt/eslint',
     '@nuxt/ui',
+    '@nuxtjs/mdc',
+    '@pinia/nuxt',
+    '@vite-pwa/nuxt',
+    '@vueuse/nuxt',
   ],
 
   devtools: {

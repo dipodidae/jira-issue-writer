@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const items = ['proactive-frame', 'ui', 'api', 'ux']
+import { SCOPE_DESCRIPTIONS } from '~/constants'
+
+const items = Array.from(SCOPE_DESCRIPTIONS.keys())
 const value = defineModel<string[]>({ default: () => ['ui'] })
 </script>
 

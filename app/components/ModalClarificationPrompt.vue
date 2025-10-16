@@ -42,6 +42,7 @@ function handleSubmit() {
           placeholder="Add clarifying details here..."
           :rows="5"
           autofocus
+          class="w-full"
         />
       </div>
     </template>

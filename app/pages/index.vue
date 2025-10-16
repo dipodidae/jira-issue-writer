@@ -1,10 +1,7 @@
 <template>
   <UPage>
-    <UPageHeader title="Jira Issue Creator" />
     <UPageBody>
-      <ClientOnly>
-        <FormPrompt />
-      </ClientOnly>
+      <FormPrompt />
     </UPageBody>
   </UPage>
 </template>

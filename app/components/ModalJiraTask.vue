@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import type { IssueType } from '#shared/types/api'
+
 interface GeneratedTask {
   title: string
   description: string
+  issueType: IssueType
 }
 
 defineProps<{
@@ -19,6 +22,12 @@ const open = defineModel<boolean>('open', { default: false })
   >
     <template #body>
       <div class="space-y-4">
+        <div>
+          <h3 class="text-highlighted mb-2 text-sm font-semibold">
+            Issue Type
+          </h3>
+          <IssueTypeBadge :issue-type="data.issueType" />
+        </div>
         <div>
           <h3 class="text-highlighted mb-2 text-sm font-semibold">
             Title
@@ -39,17 +48,7 @@ const open = defineModel<boolean>('open', { default: false })
           <h3 class="text-highlighted mb-2 text-sm font-semibold">
             Description
           </h3>
-          <UTextarea
-            :model-value="data.description"
-            readonly
-            :rows="8"
-            :ui="{ trailing: 'pr-0.5' }"
-            class="w-full"
-          >
-            <template #trailing>
-              <ButtonCopy :value="data.description" />
-            </template>
-          </UTextarea>
+          <MarkdownContentPreview :markdown="data.description" />
         </div>
       </div>
     </template>
