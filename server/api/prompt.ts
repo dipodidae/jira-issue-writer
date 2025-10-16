@@ -2,16 +2,26 @@ import type { PromptRequest, PromptResponse } from '#shared/types/api'
 import process from 'node:process'
 import OpenAI from 'openai'
 
+type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam
+type ChatChoice = OpenAI.Chat.Completions.ChatCompletion.Choice
+type CompletionStage = 'initial' | 'retry'
+
+interface CompletionPayload {
+  raw: string
+  cleaned: string
+}
+
+interface JiraTask {
+  title: string
+  description: string
+}
+
 let openaiClient: OpenAI | null = null
 let cachedApiKey: string | null = null
 
 function getOpenAIClient(apiKey: string) {
   if (!openaiClient || cachedApiKey !== apiKey) {
-    openaiClient = new OpenAI({
-      apiKey,
-      maxRetries: 3,
-      timeout: 30_000, // 30 seconds
-    })
+    openaiClient = new OpenAI({ apiKey, maxRetries: 3, timeout: 30_000 })
     cachedApiKey = apiKey
   }
   return openaiClient
@@ -20,143 +30,82 @@ function getOpenAIClient(apiKey: string) {
 const SYSTEM_PROMPT = `
 You are a Jira expert who creates concise, developer-actionable issues.
 Always output valid JSON matching this schema:
-
 {
   "title": "[SCOPE]: short, concrete summary of the problem or task",
   "description": "Detailed, factual context explaining what is wrong, why it matters, and what should happen instead."
 }
-
 Guidelines:
 - Title: under 100 characters, always starts with [SCOPE].
-- Description: Use clear paragraphs separated by double newlines (\\n\\n). Structure it with:
+- Description: Use clear paragraphs separated by \n\n.
+- Structure the description with:
   • Problem statement (what is broken/needed)
   • Context or impact (why it matters)
   • Expected behavior (what should happen)
-- Use simple formatting: newlines for readability, but avoid markdown headers, code fences, or bullets.
+- Avoid markdown formatting, bullet lists, and code fences.
 - Return raw JSON only.
-- Some scope labels are internal (e.g., "proactive-frame") — use them only when they directly explain *why* the problem occurs or where it must be fixed, not as filler context.
-
-Example:
-{
-  "title": "[UI]: Dropdown flickers when opening user menu",
-  "description": "When clicking the user menu dropdown in the top bar, it flickers rapidly before stabilizing. This affects Chrome and Safari on both desktop and mobile.\n\nThe flickering creates a jarring user experience and makes the interface feel unpolished.\n\nExpected behavior: dropdown opens smoothly and remains stable until dismissed."
-}
+- Some scope labels are internal (e.g., "proactive-frame") — only include them when they explain the cause or fix location.
 `.trim()
 
-function logDebug(step: string, data: unknown) {
-  if (process.env.NODE_ENV !== 'production')
-    console.warn(`[api/prompt] ${step}`, data)
-}
+const SCOPE_DESCRIPTIONS = {
+  'ui': 'User interface components, styling, and visual presentation.',
+  'api': 'Backend endpoints, server logic, and data processing.',
+  'ux': 'User experience, workflows, and overall product usability.',
+  'proactive-frame': 'Legacy iframe collaborating with the modern app; only mention when it materially affects the issue.',
+} as const
 
-function JIRA_PROMPT_TEMPLATE(text: string, scopes: string[]) {
-  const scopeContext = {
-    'ui': 'User interface components, styling, and visual presentation.',
-    'api': 'Backend endpoints, server logic, and data processing.',
-    'ux': 'User experience, workflows, and overall product usability.',
-    'proactive-frame': 'A legacy server-rendered iframe application that interacts with modern views. Mention only if relevant to the problem cause or resolution.',
-  } as const
-
-  const scopeDescriptions = scopes
-    .map(s => `- ${s.toUpperCase()}: ${scopeContext[s as keyof typeof scopeContext]}`)
+function buildPrompt(text: string, scopes: string[]) {
+  const descriptions = scopes
+    .map(scopeKey => {
+      const description = SCOPE_DESCRIPTIONS[scopeKey as keyof typeof SCOPE_DESCRIPTIONS]
+      return `- ${scopeKey.toUpperCase()}: ${description ?? 'Scope description missing.'}`
+    })
     .join('\n')
 
-  const scopePrefix = scopes.length === 1
-    ? scopes[0].toUpperCase()
-    : scopes.map(s => s.toUpperCase()).join('+')
+  const prefix = scopes.length > 1
+    ? scopes.map(scopeKey => scopeKey.toUpperCase()).join('+')
+    : scopes[0].toUpperCase()
 
   return `
 Input:
 ${text}
 
 Relevant scope(s):
-${scopeDescriptions}
+${descriptions}
 
 Write a Jira issue describing the problem and expected outcome.
-If the issue involves cross-behavior between the modern app and legacy iframe (proactive-frame), mention it only when it materially affects cause, navigation, or data consistency.
-Prefix the title with [${scopePrefix}] to indicate scope.
+Prefix the title with [${prefix}].
 `.trim()
 }
 
-function validateJiraOutput(jiraTask: any): boolean {
-  const titlePattern = /^\[[A-Z0-9+-]+\]:/
-  const hasValidTitle = jiraTask?.title?.match(titlePattern)
-  const hasValidDescription = jiraTask?.description && jiraTask.description.length >= 40
-
-  return hasValidTitle && hasValidDescription
+function logDebug(step: string, data: unknown) {
+  if (process.env.NODE_ENV !== 'production')
+    console.warn(`[api/prompt] ${step}`, data)
 }
 
-type ChatCompletionChoice = OpenAI.Chat.Completions.ChatCompletion.Choice
-
-function flattenMessageContent(content: any): string {
+function flattenMessageContent(content: unknown): string {
   if (!content)
     return ''
+
   if (typeof content === 'string')
     return content
+
   if (Array.isArray(content))
     return content.map(flattenMessageContent).join('')
+
   if (typeof content === 'object') {
-    if (typeof content.text === 'string')
-      return content.text
-    if (Array.isArray(content.text))
-      return content.text.map(flattenMessageContent).join('')
-    if (typeof content.text?.value === 'string')
-      return content.text.value
-    if (Array.isArray(content.text?.content))
-      return content.text.content.map(flattenMessageContent).join('')
-    if (typeof content.content === 'string')
-      return content.content
-    if (Array.isArray(content.content))
-      return content.content.map(flattenMessageContent).join('')
-    if (typeof content.arguments === 'string')
-      return content.arguments
+    const record = content as Record<string, unknown>
+    return (
+      flattenMessageContent(record.text)
+      || flattenMessageContent(record.content)
+      || (typeof record.arguments === 'string' ? record.arguments : '')
+    )
   }
+
   return ''
 }
 
-function sanitizeJsonCandidate(raw: string) {
-  const withoutFences = raw.replace(/```(json)?\n?/g, '').trim()
-  return escapeControlCharactersInJsonStrings(withoutFences).trim()
-}
-
-function extractJsonPayload(choice: ChatCompletionChoice | undefined) {
-  const message: any = choice?.message
-
-  if (!message)
-    return null
-
-  // Models can answer either via plain content or by invoking a tool call that carries JSON arguments.
-  const rawContent = flattenMessageContent(message.content)
-
-  if (rawContent && rawContent.trim()) {
-    const cleaned = sanitizeJsonCandidate(rawContent)
-    return {
-      raw: rawContent,
-      cleaned: cleaned || rawContent.trim(),
-    }
-  }
-
-  const toolCall = message.tool_calls?.find((call: any) =>
-    call?.type === 'function'
-    && typeof call.function?.arguments === 'string'
-    && call.function.arguments.trim(),
-  )
-
-  if (toolCall) {
-    const rawArgs = toolCall.function.arguments
-    const cleanedArgs = sanitizeJsonCandidate(rawArgs) || rawArgs.trim()
-    return { raw: rawArgs, cleaned: cleanedArgs }
-  }
-
-  const refusal = typeof message.refusal === 'string' ? message.refusal.trim() : ''
-
-  if (refusal) {
-    throw createError({
-      statusCode: 502,
-      message: `OpenAI refused to comply: ${refusal}`,
-    })
-  }
-
-  return null
+function stripJsonFences(raw: string) {
+  return raw.replace(/```(json)?\n?/gi, '')
 }
 
 function escapeControlCharactersInJsonStrings(jsonCandidate: string) {
@@ -164,15 +113,13 @@ function escapeControlCharactersInJsonStrings(jsonCandidate: string) {
   let inString = false
   let escapeNext = false
 
-  for (let i = 0; i < jsonCandidate.length; i++) {
-    const char = jsonCandidate[i]
+  for (let index = 0; index < jsonCandidate.length; index++) {
+    const char = jsonCandidate[index]
 
     if (!inString) {
       result += char
-
       if (char === '"')
         inString = true
-
       continue
     }
 
@@ -221,185 +168,171 @@ function escapeControlCharactersInJsonStrings(jsonCandidate: string) {
   return result
 }
 
+function sanitizeCompletionJson(raw: string) {
+  return escapeControlCharactersInJsonStrings(stripJsonFences(raw).trim())
+}
+
+function extractCompletionPayload(choice: ChatChoice | undefined, stage: CompletionStage): CompletionPayload {
+  const message: Record<string, unknown> | undefined = choice?.message as any
+
+  if (!message)
+    throw createError({ statusCode: 502, message: `Missing assistant message during ${stage} completion.` })
+
+  const raw = flattenMessageContent(message.content)
+  if (raw && raw.trim()) {
+    const cleaned = sanitizeCompletionJson(raw)
+    logDebug(`${stage} payload`, {
+      rawPreview: raw.slice(0, 160),
+      cleanedLength: cleaned.length,
+    })
+    return { raw, cleaned }
+  }
+
+  const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : []
+  const toolCall = toolCalls.find(call =>
+    call?.type === 'function'
+    && typeof call.function?.arguments === 'string'
+    && call.function.arguments.trim(),
+  ) as { function?: { arguments?: string } } | undefined
+
+  if (toolCall?.function?.arguments) {
+    const args = toolCall.function.arguments
+    const cleaned = sanitizeCompletionJson(args)
+    logDebug(`${stage} tool payload`, {
+      rawPreview: args.slice(0, 160),
+      cleanedLength: cleaned.length,
+    })
+    return { raw: args, cleaned }
+  }
+
+  const refusal = typeof message.refusal === 'string' ? message.refusal.trim() : ''
+  if (refusal)
+    throw createError({ statusCode: 502, message: `OpenAI refused: ${refusal}` })
+
+  throw createError({ statusCode: 502, message: `Empty response from OpenAI during ${stage} completion.` })
+}
+
+function parseJiraTask(payload: CompletionPayload, stage: CompletionStage): JiraTask {
+  try {
+    return JSON.parse(payload.cleaned) as JiraTask
+  }
+  catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown JSON parse error'
+    logDebug(`${stage} parse error`, {
+      error: message,
+      cleanedPreview: payload.cleaned.slice(0, 160),
+    })
+    throw createError({ statusCode: 502, message: `Invalid JSON from model (${stage}): ${message}` })
+  }
+}
+
+function isValidJiraTask(candidate: JiraTask | null | undefined): candidate is JiraTask {
+  if (!candidate)
+    return false
+
+  const titlePasses = typeof candidate.title === 'string' && /^\[[A-Z0-9+-]+\]:/.test(candidate.title)
+  const descriptionPasses = typeof candidate.description === 'string' && candidate.description.length >= 40
+  return titlePasses && descriptionPasses
+}
+
+function ensureValidJiraTask(task: JiraTask, stage: CompletionStage) {
+  if (!isValidJiraTask(task)) {
+    throw createError({
+      statusCode: 502,
+      message: `AI output missing required fields during ${stage} completion.`,
+      data: task,
+    })
+  }
+}
+
+async function createChatCompletion(openai: OpenAI, agent: string, messages: ChatMessage[]) {
+  return openai.chat.completions.create({ model: agent, max_completion_tokens: 1_000, messages })
+}
+
+function buildRetryMessages(baseMessages: ChatMessage[], assistantRaw: string): ChatMessage[] {
+  return [
+    ...baseMessages,
+    { role: 'assistant', content: assistantRaw },
+    {
+      role: 'user',
+      content: 'Your previous output was invalid JSON. Return only a JSON object with both "title" and "description" fields.',
+    },
+  ]
+}
+
+async function generateJiraTask(params: { openai: OpenAI; agent: string; baseMessages: ChatMessage[] }) {
+  const { openai, agent, baseMessages } = params
+
+  const initialResult = await createChatCompletion(openai, agent, baseMessages)
+  let payload = extractCompletionPayload(initialResult.choices[0], 'initial')
+  let jiraTask = parseJiraTask(payload, 'initial')
+
+  if (isValidJiraTask(jiraTask))
+    return jiraTask
+
+  const retryMessages = buildRetryMessages(baseMessages, payload.raw)
+  const retryResult = await createChatCompletion(openai, agent, retryMessages)
+  payload = extractCompletionPayload(retryResult.choices[0], 'retry')
+  jiraTask = parseJiraTask(payload, 'retry')
+  ensureValidJiraTask(jiraTask, 'retry')
+  return jiraTask
+}
+
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
   const config = useRuntimeConfig(event)
   const body = await readBody<PromptRequest>(event)
 
-  const text = body?.text?.trim()
-  const agent = body?.agent || 'gpt-5-mini'
-  const scope = body?.scope || ['ui']
+  const trimmedText = body?.text?.trim()
+  const agent = body?.agent ?? 'gpt-5-mini'
+  const scope = body?.scope ?? ['ui']
 
-  if (!text)
+  if (!trimmedText)
     throw createError({ statusCode: 400, message: 'No text provided' })
-  if (!agent)
-    throw createError({ statusCode: 400, message: 'No agent specified' })
-  if (!scope || !Array.isArray(scope) || scope.length === 0)
-    throw createError({ statusCode: 400, message: 'At least one scope must be specified' })
 
-  if (!config.openaiApiKey) {
-    throw createError({
-      statusCode: 500,
-      message: 'OpenAI API key not configured. Set NUXT_OPENAI_API_KEY.',
-    })
-  }
+  if (!Array.isArray(scope) || scope.length === 0)
+    throw createError({ statusCode: 400, message: 'At least one scope required' })
 
-  // Validate API key format (should start with sk-)
   const apiKey = (config.openaiApiKey || process.env.NUXT_OPENAI_API_KEY || '').trim()
+  if (!apiKey)
+    throw createError({ statusCode: 500, message: 'Missing OpenAI API key (NUXT_OPENAI_API_KEY).' })
 
-  if (!apiKey) {
-    throw createError({
-      statusCode: 500,
-      message: 'OpenAI API key is not configured. Set NUXT_OPENAI_API_KEY.',
-    })
-  }
-
-  const openai = getOpenAIClient(apiKey)
+  const client = getOpenAIClient(apiKey)
+  const normalizedText = trimmedText.replace(/\s+/g, ' ')
+  const baseMessages: ChatMessage[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: buildPrompt(normalizedText, scope) },
+  ]
 
   try {
-    const baseMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: JIRA_PROMPT_TEMPLATE(text.replace(/\s+/g, ' '), scope) },
-    ]
-
-    const createCompletion = async (messages: typeof baseMessages) =>
-      await openai.chat.completions.create({
-        model: agent,
-        max_completion_tokens: 1000,
-        messages,
-      })
-
-    let response = await createCompletion(baseMessages)
-    let payload = extractJsonPayload(response.choices[0])
-
-    logDebug('initial payload', {
-      hasChoice: Boolean(response.choices[0]),
-      rawPreview: payload?.raw?.slice(0, 160),
-      cleanedLength: payload?.cleaned?.length,
-    })
-
-    if (!payload?.cleaned) {
-      throw createError({
-        statusCode: 502,
-        message: 'Empty response from OpenAI',
-      })
-    }
-
-    let cleaned = payload.cleaned
-    let jiraTask: any
-
-    try {
-      jiraTask = JSON.parse(cleaned)
-    }
-    catch (parseErr: any) {
-      logDebug('parse error initial', {
-        error: parseErr?.message,
-        cleanedPreview: cleaned.slice(0, 160),
-      })
-      throw createError({
-        statusCode: 502,
-        message: `Invalid JSON output from model: ${parseErr.message}`,
-      })
-    }
-
-    // Validate and retry once if needed
-    if (!validateJiraOutput(jiraTask)) {
-      const retryMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        ...baseMessages,
-      ]
-
-      if (payload.raw) {
-        retryMessages.push({
-          role: 'assistant',
-          content: payload.raw,
-        })
-      }
-
-      retryMessages.push({
-        role: 'user',
-        content: 'Your previous output did not follow the required JSON format. Please ensure you return a valid JSON object with "title" starting with [SCOPE]: and "description" fields. Return ONLY the JSON object, no markdown code fences.',
-      })
-
-      response = await createCompletion(retryMessages)
-      payload = extractJsonPayload(response.choices[0])
-
-      logDebug('retry payload', {
-        hasChoice: Boolean(response.choices[0]),
-        rawPreview: payload?.raw?.slice(0, 160),
-        cleanedLength: payload?.cleaned?.length,
-      })
-
-      if (!payload?.cleaned) {
-        throw createError({
-          statusCode: 502,
-          message: 'Empty response from OpenAI on retry',
-        })
-      }
-
-      cleaned = payload.cleaned
-
-      try {
-        jiraTask = JSON.parse(cleaned)
-      }
-      catch (retryParseErr: any) {
-        logDebug('parse error retry', {
-          error: retryParseErr?.message,
-          cleanedPreview: cleaned.slice(0, 160),
-        })
-        throw createError({
-          statusCode: 502,
-          message: `Invalid JSON output from model on retry: ${retryParseErr.message}`,
-        })
-      }
-    }
-
-    if (!validateJiraOutput(jiraTask)) {
-      throw createError({
-        statusCode: 502,
-        message: 'AI output missing required fields (title or description)',
-        data: { output: jiraTask },
-      })
-    }
-
-    return {
-      title: jiraTask.title,
-      description: jiraTask.description,
-    }
+    const jiraTask = await generateJiraTask({ openai: client, agent, baseMessages })
+    return { title: jiraTask.title, description: jiraTask.description }
   }
-  catch (err: any) {
-    if (err instanceof OpenAI.APIError) {
-      if (err instanceof OpenAI.AuthenticationError) {
+  catch (error: unknown) {
+    if (error instanceof OpenAI.APIError) {
+      if (error instanceof OpenAI.AuthenticationError) {
         throw createError({
           statusCode: 500,
-          message: 'Invalid OpenAI API key. Please check your NUXT_OPENAI_API_KEY environment variable.',
-          data: {
-            error: 'Authentication failed with OpenAI',
-            hint: 'Verify the API key is correct and active at https://platform.openai.com/api-keys',
-          },
+          message: 'Invalid OpenAI API key',
+          data: { hint: 'Verify NUXT_OPENAI_API_KEY at https://platform.openai.com/api-keys' },
         })
       }
 
-      if (err instanceof OpenAI.RateLimitError) {
-        const headers = err.headers
+      if (error instanceof OpenAI.RateLimitError) {
         throw createError({
           statusCode: 429,
-          message: 'Rate limit exceeded. Please try again later.',
-          data: {
-            retryAfter: headers?.get('retry-after') || 'unknown',
-            resetTime: headers?.get('x-ratelimit-reset-requests') || 'unknown',
-          },
+          message: 'Rate limit exceeded',
+          data: { retryAfter: error.headers?.get('retry-after') || 'unknown' },
         })
       }
 
       throw createError({
-        statusCode: err.status || 502,
-        message: err.message || 'OpenAI API error',
-        data: { requestID: err.requestID },
+        statusCode: error.status || 502,
+        message: error.message || 'OpenAI API error',
+        data: { requestID: error.requestID },
       })
     }
 
-    throw createError({
-      statusCode: 502,
-      message: err.message || 'Failed to generate Jira task',
-    })
+    const fallbackMessage = error instanceof Error ? error.message : 'Failed to generate Jira task'
+    throw createError({ statusCode: 502, message: fallbackMessage })
   }
 })
