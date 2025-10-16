@@ -19,6 +19,12 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  mdc: {
+    headings: {
+      anchorLinks: false,
+    },
+  },
+
   runtimeConfig: {
     openaiApiKey: '',
   },

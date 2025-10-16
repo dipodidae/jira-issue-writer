@@ -33,7 +33,81 @@ export interface PromptResponse {
   issueType?: IssueType
   reason?: string
   missingInfoPrompt?: string
+  // Enriched issue fields (populated when generation succeeds with enhanced schema)
+  scope?: string
+  priority?: 'highest' | 'high' | 'medium' | 'low' | null
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  labels?: string[]
+  components?: string[]
+  epicLink?: string | null
+  parent?: string | null
+  dependencies?: string[]
+  estimate?: string | null
+  riskAreas?: string[]
+  dataSensitivity?: 'none' | 'contains-pii' | 'contains-financial' | 'unknown'
+  acceptanceCriteria?: string[]
+  multiItem?: boolean
 }
+
+/**
+ * Enhanced issue generation output schema produced by system prompt.
+ * This is separate from PromptResponse (legacy) to allow gradual migration.
+ */
+export interface IssueGenerationResultBase {
+  status: 'enough' | 'not_enough'
+  title: string
+  issueType: IssueType
+  scope: string
+  priority: 'highest' | 'high' | 'medium' | 'low' | null
+  severity: 'critical' | 'major' | 'minor' | 'trivial' | null
+  labels: string[]
+  components: string[]
+  epicLink: string | null
+  parent: string | null
+  dependencies: string[]
+  estimate: string | null
+  riskAreas: string[]
+  dataSensitivity: 'none' | 'contains-pii' | 'contains-financial' | 'unknown'
+  acceptanceCriteria: string[]
+  multiItem: boolean
+  description: string
+}
+
+export interface IssueGenerationResultEnough extends IssueGenerationResultBase {
+  status: 'enough'
+  clarificationRequest?: undefined
+  reason?: undefined
+  suggestedIssueType?: undefined
+  missingSections?: undefined
+}
+
+export interface IssueGenerationResultNotEnough {
+  status: 'not_enough'
+  reason: string
+  clarificationRequest: string
+  suggestedIssueType: IssueType | null
+  missingSections: string[]
+  // Provide minimal scaffolding; other fields not guaranteed.
+  title?: string
+  issueType?: IssueType
+  scope?: string
+  description?: string
+  acceptanceCriteria?: string[]
+  // Keep placeholders for structural parity; may be omitted.
+  priority?: 'highest' | 'high' | 'medium' | 'low' | null
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  labels?: string[]
+  components?: string[]
+  epicLink?: string | null
+  parent?: string | null
+  dependencies?: string[]
+  estimate?: string | null
+  riskAreas?: string[]
+  dataSensitivity?: 'none' | 'contains-pii' | 'contains-financial' | 'unknown'
+  multiItem?: boolean
+}
+
+export type IssueGenerationResult = IssueGenerationResultEnough | IssueGenerationResultNotEnough
 
 /**
  * Agent types

@@ -23,7 +23,26 @@ const toast = useToast()
 const taskModalOpen = ref(false)
 const clarificationModalOpen = ref(false)
 
-const taskResult = ref<{ title: string, description: string, issueType: IssueType } | null>(null)
+interface TaskResultData {
+  title: string
+  description: string
+  issueType: IssueType
+  scope?: string
+  priority?: string | null
+  severity?: string | null
+  labels?: string[]
+  components?: string[]
+  epicLink?: string | null
+  parent?: string | null
+  dependencies?: string[]
+  estimate?: string | null
+  riskAreas?: string[]
+  dataSensitivity?: string
+  acceptanceCriteria?: string[]
+  multiItem?: boolean
+}
+
+const taskResult = ref<TaskResultData | null>(null)
 const clarificationPrompt = ref('')
 const previousClarifications = ref<string[]>([])
 const currentStage = ref<PromptStage>('initial')
@@ -85,6 +104,19 @@ function handleDone(response: PromptResponse) {
     title: response.title,
     description: response.description,
     issueType: response.issueType,
+    scope: response.scope,
+    priority: response.priority,
+    severity: response.severity,
+    labels: response.labels,
+    components: response.components,
+    epicLink: response.epicLink,
+    parent: response.parent,
+    dependencies: response.dependencies,
+    estimate: response.estimate,
+    riskAreas: response.riskAreas,
+    dataSensitivity: response.dataSensitivity,
+    acceptanceCriteria: response.acceptanceCriteria,
+    multiItem: response.multiItem,
   }
   taskModalOpen.value = true
   clarificationModalOpen.value = false

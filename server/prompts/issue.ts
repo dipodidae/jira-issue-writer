@@ -1,4 +1,4 @@
-Input notes:
+export default `Input notes:
 {{CONTEXT}}
 
 Relevant scope(s):
@@ -6,3 +6,4 @@ Relevant scope(s):
 
 Generate a Jira issue or indicate missing information.
 Prefix title with [{{PREFIX}}].
+`

@@ -33,3 +33,11 @@
 
 - Extracted OpenAI prompt bodies into markdown templates under `server/prompts/`, enabling easier editing with IDE highlighting while keeping runtime interpolation via helper functions.
 - Next step: consider unit tests around template rendering to catch missing placeholders when prompt contracts evolve.
+
+- Expanded `server/prompts/system.ts` with richer domain guidance (financial sensitivity, scope rules, multi-item handling) and an explicit JSON schema (priority, severity, labels, components, dependencies, estimate, riskAreas, dataSensitivity, acceptanceCriteria array, multiItem). Added illustrative examples for `enough` vs `not_enough` paths and stricter output constraints (no speculation, humor only in clarification path).
+- Added `IssueGenerationResult` types to `shared/types/api.ts` (split into Enough vs NotEnough variants) to support migration from legacy `PromptResponse` while allowing optional fields under the clarification path.
+- Next step: adapt server parsing logic to prefer the enhanced schema when present, validate via a runtime guard (e.g., Zod) and surface new metadata (labels/components/riskAreas) in the UI.
+- Integrated enhanced schema parsing in `server/api/prompt.ts` with a lightweight validator (`parseIssueGenerationResult`) and fallback to legacy fields; preserved clarification flow compatibility.
+- Added enriched field rendering (priority, severity, labels, components, riskAreas, dataSensitivity, estimate, acceptanceCriteria) to `ModalJiraTask.vue` with defensive checks.
+- Next step: propagate enriched fields fully to client state (currently only minimal fields returned in API response), add dedicated endpoint or extend existing response shape; consider adding automated unit tests for validator edge cases.
+- Propagated enriched fields through API response by extending `PromptResponse` and mapping enhanced schema fields in `handleJiraEnhanced`. Updated `FormPrompt.vue` to pass enriched data into `ModalJiraTask` so chips now populate when model supplies them.

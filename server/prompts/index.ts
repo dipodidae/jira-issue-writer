@@ -1,7 +1,7 @@
-import clarificationSystemTemplate from './clarification-system.md?raw'
-import clarificationUserTemplate from './clarification-user.md?raw'
-import issueTemplate from './issue.md?raw'
-import systemTemplate from './system.md?raw'
+import clarificationSystemTemplate from './clarification-system'
+import clarificationUserTemplate from './clarification-user'
+import issueTemplate from './issue'
+import systemTemplate from './system'
 
 interface TemplateValues {
   [key: string]: string | number | undefined

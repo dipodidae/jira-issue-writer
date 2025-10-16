@@ -1,2 +1,3 @@
-Original notes: {{TEXT}}
+export default `Original notes: {{TEXT}}
 Clarifications so far: {{CLARIFICATIONS}}.
+`
