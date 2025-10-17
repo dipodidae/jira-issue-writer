@@ -1,7 +1,4 @@
-import process from 'node:process'
 import { pwa } from './app/config/pwa'
-
-const nitroPreset = process.env.VERCEL ? 'vercel' : 'netlify'
 
 export default defineNuxtConfig({
   modules: [
@@ -44,7 +41,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-08-14',
 
   nitro: {
-    preset: nitroPreset,
+    preset: 'vercel',
     esbuild: {
       options: {
         target: 'esnext',

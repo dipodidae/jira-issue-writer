@@ -1,9 +1,9 @@
 import type { IssueType, PromptRequest, PromptResponse } from '#shared/types/api'
 import process from 'node:process'
-import { ISSUE_TYPE_GUIDE, ISSUE_TYPE_PROMPT_VALUES, normalizeIssueType } from '#shared/constants/issue-types'
-import { SCOPE_DESCRIPTIONS } from '#shared/constants/scopes'
 import { parseIssueGenerationResult } from '#shared/types/issue-generation'
 import OpenAI from 'openai'
+import { ISSUE_TYPE_GUIDE, ISSUE_TYPE_PROMPT_VALUES, normalizeIssueType } from '~/constants/issue-types'
+import { SCOPE_DESCRIPTIONS } from '~/constants/scopes'
 // (Import ordering enforced above)
 import {
   buildClarificationSystemPrompt,
