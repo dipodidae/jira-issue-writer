@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { IssueType } from '#shared/types/api'
 import { ISSUE_TYPES } from '~/constants/issue-types'
-import { computed } from 'vue'
 
 const props = defineProps<{
   issueType: IssueType
