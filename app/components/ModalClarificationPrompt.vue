@@ -18,6 +18,13 @@ watch(() => open.value, (isOpen) => {
 const trimmedClarification = computed(() => userClarification.value.trim())
 const submitDisabled = computed(() => props.loading || trimmedClarification.value.length === 0)
 
+function submitUnknown() {
+  if (props.loading)
+    return
+
+  emit('submit', 'I don\'t know / can\'t reproduce reliably')
+}
+
 function handleSubmit() {
   if (submitDisabled.value)
     return
@@ -49,6 +56,13 @@ function handleSubmit() {
 
     <template #footer="{ close }">
       <div class="flex items-center gap-2">
+        <UButton
+          label="I don't know"
+          color="neutral"
+          variant="soft"
+          :disabled="props.loading"
+          @click="submitUnknown"
+        />
         <UButton
           label="Cancel"
           color="neutral"

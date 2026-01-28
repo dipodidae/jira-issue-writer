@@ -81,8 +81,33 @@ function extractPayload(choice: ChatChoice | undefined, stage: string) {
 }
 
 async function complete(openai: OpenAI, model: string, messages: ChatMessage[], maxTokens = 400) {
-  const res = await openai.chat.completions.create({ model, messages, max_completion_tokens: maxTokens })
-  return extractPayload(res.choices[0], 'primary')
+  try {
+    const res = await openai.chat.completions.create({ model, messages, max_completion_tokens: maxTokens })
+    return extractPayload(res.choices[0], 'primary')
+  }
+  catch (err: any) {
+    console.error('[prompt] OpenAI API error:', err)
+
+    // Handle specific OpenAI errors
+    if (err.status === 401) {
+      throw createError({ statusCode: 500, message: 'Invalid OpenAI API key' })
+    }
+    if (err.status === 429) {
+      throw createError({ statusCode: 429, message: 'OpenAI rate limit exceeded. Please try again shortly.' })
+    }
+    if (err.status === 400) {
+      throw createError({ statusCode: 502, message: `Invalid request to OpenAI: ${err.message || 'Bad request'}` })
+    }
+    if (err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
+      throw createError({ statusCode: 503, message: 'Cannot reach OpenAI API. Please check network connectivity.' })
+    }
+
+    // Generic fallback
+    throw createError({
+      statusCode: 502,
+      message: `OpenAI API error: ${err.message || 'Unknown error'}`,
+    })
+  }
 }
 
 function getApiKey(cfg: any): string {
@@ -144,11 +169,17 @@ function parseJson<T>(input: string): T | null {
 }
 
 async function buildFallbackClarification(client: OpenAI, model: string, text: string, prev: string[]): Promise<string> {
-  const msgs: ChatMessage[] = [
-    { role: 'system', content: buildClarificationSystemPrompt() },
-    { role: 'user', content: buildClarificationUserPrompt({ text, clarifications: prev.length ? prev.join(' | ') : 'none' }) },
-  ]
-  return (await complete(client, model, msgs, 100)) || 'Could you provide more detail about what is missing?'
+  try {
+    const msgs: ChatMessage[] = [
+      { role: 'system', content: buildClarificationSystemPrompt() },
+      { role: 'user', content: buildClarificationUserPrompt({ text, clarifications: prev.length ? prev.join(' | ') : 'none' }) },
+    ]
+    return (await complete(client, model, msgs, 100)) || 'Could you provide more detail about what is missing?'
+  }
+  catch (err) {
+    console.error('[prompt] Failed to generate fallback clarification:', err)
+    return 'Could you provide more detail about what is missing?'
+  }
 }
 
 async function handleNeedsInfo(
@@ -217,45 +248,77 @@ function handleJiraEnhanced(rawObj: any, raw: string): PromptResponse {
 }
 
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
-  const cfg = useRuntimeConfig(event)
-  const body = await readBody<PromptRequest>(event)
-  const apiKey = getApiKey(cfg)
-  const text = ensureText(body.text)
-  const scope = normalize.scope(body.scope)
-  const clarifications = normalize.clarifications(body.previousClarifications)
-  const client = getOpenAIClient(apiKey)
-  const model = body.agent ?? 'gpt-4o-mini'
+  try {
+    const cfg = useRuntimeConfig(event)
 
-  console.warn(`[prompt] Using model: ${model}`)
+    // Read and validate body
+    let body: PromptRequest
+    try {
+      body = await readBody<PromptRequest>(event)
+      if (!body || typeof body !== 'object') {
+        throw createError({ statusCode: 400, message: 'Invalid request body' })
+      }
+    }
+    catch (err: any) {
+      console.error('[prompt] Failed to parse request body:', err)
+      throw createError({ statusCode: 400, message: 'Invalid or missing request body' })
+    }
 
-  const userContent = buildIssueContext(appendClarifications(text, clarifications), scope)
-  const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: userContent },
-  ]
+    const apiKey = getApiKey(cfg)
+    const text = ensureText(body.text)
+    const scope = normalize.scope(body.scope)
+    const clarifications = normalize.clarifications(body.previousClarifications)
+    const client = getOpenAIClient(apiKey)
+    const model = body.agent ?? 'gpt-4o-mini'
 
-  const raw = await complete(client, model, messages, 800) // Increased for enhanced schema
-  const parsed = parseJson<LegacySufficiencyResult & LegacyJiraTask & Record<string, any>>(raw)
-  if (!parsed) {
-    console.error('[prompt] Invalid JSON from model:', raw.slice(0, 500))
+    console.warn(`[prompt] Using model: ${model}`)
+
+    const userContent = buildIssueContext(appendClarifications(text, clarifications), scope)
+    const messages: ChatMessage[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userContent },
+    ]
+
+    const raw = await complete(client, model, messages, 800) // Increased for enhanced schema
+    const parsed = parseJson<LegacySufficiencyResult & LegacyJiraTask & Record<string, any>>(raw)
+    if (!parsed) {
+      console.error('[prompt] Invalid JSON from model:', raw.slice(0, 500))
+      throw createError({
+        statusCode: 502,
+        message: 'Invalid JSON returned by model',
+        data: { preview: raw.slice(0, 300) },
+      })
+    }
+
+    if (parsed.status === 'not_enough') {
+      // Attempt enhanced not_enough parsing for potential richer clarification.
+      const enhanced = parseIssueGenerationResult(parsed)
+      if (enhanced.ok && enhanced.value && enhanced.value.status === 'not_enough') {
+        return handleNeedsInfo({
+          reason: enhanced.value.reason,
+          clarificationRequest: enhanced.value.clarificationRequest,
+          missing_info_prompt: parsed.missing_info_prompt,
+        }, clarifications, client, model, text)
+      }
+      return handleNeedsInfo(parsed, clarifications, client, model, text)
+    }
+    return handleJiraEnhanced(parsed, raw)
+  }
+  catch (err: any) {
+    // If it's already a createError H3Error, rethrow it
+    if (err.statusCode) {
+      console.error(`[prompt] Known error (${err.statusCode}):`, err.message)
+      throw err
+    }
+
+    // Log unexpected errors with full details
+    console.error('[prompt] Unexpected error:', err)
+
+    // Return a safe 500 error
     throw createError({
-      statusCode: 502,
-      message: 'Invalid JSON returned by model',
-      data: { preview: raw.slice(0, 300) },
+      statusCode: 500,
+      message: 'An unexpected error occurred while processing your request',
+      data: { error: err.message || String(err) },
     })
   }
-
-  if (parsed.status === 'not_enough') {
-    // Attempt enhanced not_enough parsing for potential richer clarification.
-    const enhanced = parseIssueGenerationResult(parsed)
-    if (enhanced.ok && enhanced.value && enhanced.value.status === 'not_enough') {
-      return handleNeedsInfo({
-        reason: enhanced.value.reason,
-        clarificationRequest: enhanced.value.clarificationRequest,
-        missing_info_prompt: parsed.missing_info_prompt,
-      }, clarifications, client, model, text)
-    }
-    return handleNeedsInfo(parsed, clarifications, client, model, text)
-  }
-  return handleJiraEnhanced(parsed, raw)
 })
