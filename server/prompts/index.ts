@@ -7,8 +7,10 @@ interface TemplateValues {
   [key: string]: string | number | undefined
 }
 
+const RE_TEMPLATE_VAR = /\{\{(\w+)\}\}/g
+
 function renderTemplate(template: string, values: TemplateValues, options?: { trim?: boolean }) {
-  const rendered = template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
+  const rendered = template.replace(RE_TEMPLATE_VAR, (_match, key) => {
     const value = values[key]
     return typeof value === 'number' ? String(value) : value ?? ''
   })

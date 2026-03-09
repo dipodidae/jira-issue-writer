@@ -253,12 +253,16 @@ export const ISSUE_TYPE_KEYS = ISSUE_TYPE_LIST.map(meta => meta.key)
 
 export const ISSUE_TYPE_PROMPT_VALUES = ISSUE_TYPE_KEYS.join(', ')
 
+const RE_NON_ALPHA = /[^a-z]/g
+const RE_MULTI_UNDERSCORE = /_+/g
+const RE_TRIM_UNDERSCORE = /^_|_$/g
+
 function normalizeToken(raw: string) {
   return raw
     .toLowerCase()
-    .replace(/[^a-z]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '')
+    .replace(RE_NON_ALPHA, '_')
+    .replace(RE_MULTI_UNDERSCORE, '_')
+    .replace(RE_TRIM_UNDERSCORE, '')
 }
 
 const ISSUE_TYPE_ALIAS_MAP = new Map<string, IssueType>()

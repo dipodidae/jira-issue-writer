@@ -1,5 +1,8 @@
+const RE_CODE_FENCE_OPEN = /```\w*\s*/g
+const RE_CODE_FENCE_CLOSE = /```/g
+
 function removeJsonCodeFences(jsonString: string) {
-  return jsonString.replace(/```\w*\s*/g, '').replace(/```/g, '').trim()
+  return jsonString.replace(RE_CODE_FENCE_OPEN, '').replace(RE_CODE_FENCE_CLOSE, '').trim()
 }
 
 function shouldEscapeCharacter(char: string): boolean {

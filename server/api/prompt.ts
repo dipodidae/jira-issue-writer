@@ -13,6 +13,8 @@ import {
 } from '../prompts'
 import { sanitizeJsonResponse } from '../utils/json-sanitizer'
 
+const RE_TRAILING_COMMA = /,(\s*[}\]])/g
+
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam
 type ChatChoice = OpenAI.Chat.Completions.ChatCompletion.Choice
 
@@ -152,7 +154,7 @@ function parseJson<T>(input: string): T | null {
     try {
       // Remove trailing commas before } or ]
       const fixed = input
-        .replace(/,(\s*[}\]])/g, '$1')
+        .replace(RE_TRAILING_COMMA, '$1')
         // Try to fix incomplete JSON by adding closing brackets
         .trim()
 
