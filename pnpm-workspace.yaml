@@ -1,6 +1,6 @@
 shellEmulator: true
 
-trustPolicy: safe
+trustPolicy: no-downgrade
 
 catalogs:
   build:
