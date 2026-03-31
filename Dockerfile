@@ -8,7 +8,10 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
     pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm build
+# Override the nitro preset to node-server so the output is a standalone Node.js server.
+# The project default (preset: 'vercel') is for Vercel deployments and does not produce
+# a runnable .output/server/index.mjs artifact.
+RUN NITRO_PRESET=node-server pnpm build
 
 # SSR
 FROM node:20-alpine AS production-stage
