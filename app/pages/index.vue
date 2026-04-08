@@ -17,6 +17,11 @@ const {
   switchSession,
 } = useConversation()
 
+const isHydrated = ref(false)
+onMounted(() => {
+  isHydrated.value = true
+})
+
 function applyTemplate(text: string) {
   draftInput.value = text
 }
@@ -44,15 +49,16 @@ function applyTemplate(text: string) {
         </div>
       </div>
 
-      <SidebarTemplates v-if="!hasMessages" @select="applyTemplate" />
+      <SidebarTemplates v-if="isHydrated && !hasMessages" @select="applyTemplate" />
 
       <SidebarPinnedContext v-model="pinnedContext" />
 
-      <SidebarDraftSummary v-if="latestDraft" :draft="latestDraft" />
+      <SidebarDraftSummary v-if="isHydrated && latestDraft" :draft="latestDraft" />
 
-      <SidebarRecentDrafts :drafts="draftHistory" />
+      <SidebarRecentDrafts v-if="isHydrated" :drafts="draftHistory" />
 
       <SidebarSessionList
+        v-if="isHydrated"
         :sessions="sessions"
         :active-id="activeSessionId"
         @switch="switchSession"
