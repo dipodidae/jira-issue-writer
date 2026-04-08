@@ -32,19 +32,7 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/* Dark-mode-first surface system */
-.dark {
-  --surface-page: #0a0a0b;
-  --surface-panel: #111113;
-  --surface-elevated: #1a1a1d;
-  --surface-overlay: #222226;
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --text-primary: #f0f0f3;
-  --text-secondary: #a0a0ab;
-  --text-muted: #63636e;
-}
-
+/* Surface system — light defaults, dark override */
 :root {
   --surface-page: #fafafa;
   --surface-panel: #ffffff;
@@ -55,6 +43,18 @@ h3 {
   --text-primary: #18181b;
   --text-secondary: #52525b;
   --text-muted: #a1a1aa;
+}
+
+.dark {
+  --surface-page: #0a0a0b;
+  --surface-panel: #111113;
+  --surface-elevated: #1a1a1d;
+  --surface-overlay: #222226;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --text-primary: #f0f0f3;
+  --text-secondary: #a0a0ab;
+  --text-muted: #63636e;
 }
 
 /* Custom scrollbar for dark mode */
