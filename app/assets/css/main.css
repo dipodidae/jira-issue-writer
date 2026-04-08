@@ -78,6 +78,8 @@ h3 {
 
 /* Smooth color transitions for theme switching */
 body {
+  background-color: var(--surface-page);
+  color: var(--text-primary);
   transition:
     background-color 0.2s ease,
     color 0.2s ease;

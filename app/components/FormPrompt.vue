@@ -18,6 +18,7 @@ const state = reactive<Partial<Schema>>({
 })
 
 const toast = useToast()
+const loadingIndicator = useLoadingIndicator()
 const taskModalOpen = ref(false)
 const clarificationModalOpen = ref(false)
 
@@ -149,19 +150,25 @@ function handleResponse(response: PromptResponse) {
 }
 
 async function runPrompt() {
-  await execute()
+  loadingIndicator.start()
+  try {
+    await execute()
 
-  if (error.value) {
-    toast.add({
-      title: 'Error',
-      description: errorMessage.value || 'An error occurred',
-      color: 'error',
-    })
-    return
+    if (error.value) {
+      toast.add({
+        title: 'Error',
+        description: errorMessage.value || 'An error occurred',
+        color: 'error',
+      })
+      return
+    }
+
+    if (data.value)
+      handleResponse(data.value)
   }
-
-  if (data.value)
-    handleResponse(data.value)
+  finally {
+    loadingIndicator.finish()
+  }
 }
 
 async function onSubmit(_event: FormSubmitEvent<Schema>) {
@@ -171,9 +178,11 @@ async function onSubmit(_event: FormSubmitEvent<Schema>) {
   await runPrompt()
 }
 
+const isPending = computed(() => status.value === 'pending')
+
 const formRef = ref<{ $el: HTMLFormElement } | null>(null)
 const handlePromptKeydown = useSubmitOnEnter(() => {
-  if (status.value === 'pending')
+  if (isPending.value)
     return
   formRef.value?.$el?.requestSubmit()
 })
@@ -191,57 +200,57 @@ async function submitClarification(message: string) {
 <template>
   <div>
     <UForm ref="formRef" :schema="schema" :state="state" @submit="onSubmit">
-      <!-- Main textarea -->
-      <UFormField name="prompt">
-        <UTextarea
-          v-model="state.prompt"
-          placeholder="Describe the issue, bug, or feature request..."
-          class="w-full"
-          :rows="7"
-          autoresize
-          :ui="{
-            base: 'rounded-xl border-[--border-default] bg-(--surface-panel) text-(--text-primary) placeholder:text-(--text-muted) focus:ring-2 focus:ring-primary-500/30',
-          }"
-          @keydown="handlePromptKeydown"
-        />
-        <template #hint>
-          <span class="text-xs text-(--text-muted)">Enter to submit, Shift+Enter for newline</span>
-        </template>
-      </UFormField>
+      <fieldset :disabled="isPending" class="space-y-4">
+        <!-- Main textarea -->
+        <UFormField name="prompt">
+          <UTextarea
+            v-model="state.prompt"
+            placeholder="Describe the issue, bug, or feature request..."
+            class="w-full"
+            :rows="5"
+            autoresize
+            :ui="{
+              base: 'rounded-xl border-[--border-default] bg-(--surface-panel) text-(--text-primary) placeholder:text-(--text-muted) focus:ring-2 focus:ring-primary-500/30',
+            }"
+            @keydown="handlePromptKeydown"
+          />
+          <template #hint>
+            <span class="text-xs text-(--text-muted)">Enter to submit, Shift+Enter for newline</span>
+          </template>
+        </UFormField>
 
-      <!-- Controls bar -->
-      <div class="mt-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <UFormField name="scope">
-            <SelectScope v-model="state.scope" />
-          </UFormField>
-          <UFormField name="agent">
-            <DropdownAgents v-model="state.agent" />
-          </UFormField>
+        <!-- Controls bar -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <UFormField name="scope">
+              <SelectScope v-model="state.scope" />
+            </UFormField>
+            <UFormField name="agent">
+              <DropdownAgents v-model="state.agent" />
+            </UFormField>
+          </div>
+          <UButton
+            type="submit"
+            :loading="isPending"
+            :disabled="isPending"
+            size="md"
+            class="px-5"
+          >
+            <UIcon name="i-lucide-sparkles" class="size-4" />
+            Generate
+          </UButton>
         </div>
-        <UButton
-          type="submit"
-          :loading="status === 'pending'"
-          :disabled="status === 'pending'"
-          size="md"
-          class="px-5"
-        >
-          <UIcon name="i-lucide-sparkles" class="size-4" />
-          Generate
-        </UButton>
-      </div>
+      </fieldset>
     </UForm>
 
-    <!-- Loading state -->
-    <div v-if="status === 'pending'" class="mt-8">
-      <div class="flex items-center gap-3 rounded-xl border border-(--border-subtle) bg-(--surface-panel) px-5 py-4">
-        <div class="border-primary-500 size-4 animate-spin rounded-full border-2 border-t-transparent" />
-        <span class="text-sm text-(--text-secondary)">Generating your Jira ticket...</span>
-      </div>
+    <!-- Loading indicator -->
+    <div v-if="isPending" class="mt-6 flex items-center gap-2 text-sm text-(--text-secondary)">
+      <UIcon name="i-lucide-loader-circle" class="text-primary-500 size-4 animate-spin" />
+      Generating your ticket&hellip;
     </div>
 
     <!-- Error state -->
-    <div v-if="errorMessage && status !== 'pending'" class="mt-8">
+    <div v-if="errorMessage && !isPending" class="mt-6">
       <UAlert color="error" variant="subtle" :title="errorMessage" icon="i-lucide-alert-circle" />
     </div>
 
@@ -249,7 +258,7 @@ async function submitClarification(message: string) {
     <ModalClarificationPrompt
       v-model:open="clarificationModalOpen"
       :prompt="clarificationPrompt"
-      :loading="status === 'pending'"
+      :loading="isPending"
       @submit="submitClarification"
     />
   </div>
