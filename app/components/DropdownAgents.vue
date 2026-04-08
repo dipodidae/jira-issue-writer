@@ -25,7 +25,6 @@ const isDisabled = computed<boolean>(() => {
     value-key="value"
     placeholder="Model"
     size="sm"
-    class="w-44"
     :disabled="isDisabled"
   />
 </template>

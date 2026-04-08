@@ -25,32 +25,28 @@ const handleKeydown = useSubmitOnEnter(() => handleSubmit())
 </script>
 
 <template>
-  <div class="border-t border-(--border-subtle) bg-(--surface-panel)/90 p-4 backdrop-blur-xl sm:p-5">
-    <div class="rounded-3xl border border-(--border-default) bg-(--surface-page) p-3 shadow-sm">
+  <div class="border-t border-(--border-subtle) bg-(--surface-panel)/90 px-4 py-3 backdrop-blur-xl">
+    <div class="flex items-end gap-2 rounded-xl border border-(--border-default) bg-(--surface-page) p-2">
       <UTextarea
         v-model="model"
-        :rows="2"
+        :rows="1"
         autoresize
         :placeholder="placeholder"
-        class="w-full"
+        class="min-h-0 flex-1"
         :ui="{
-          base: 'min-h-18 rounded-2xl border-transparent bg-transparent text-(--text-primary) placeholder:text-(--text-muted) focus:ring-0',
+          base: 'max-h-32 rounded-lg border-transparent bg-transparent text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:ring-0',
         }"
         @keydown="handleKeydown"
       />
-
-      <div class="mt-3 flex items-center justify-between gap-3">
-        <span class="text-xs text-(--text-muted)">{{ hint }}</span>
-        <UButton
-          icon="i-lucide-send"
-          size="md"
-          :loading="pending"
-          :disabled="submitDisabled"
-          @click="handleSubmit"
-        >
-          Send
-        </UButton>
-      </div>
+      <UButton
+        icon="i-lucide-arrow-up"
+        size="sm"
+        :loading="pending"
+        :disabled="submitDisabled"
+        class="shrink-0"
+        @click="handleSubmit"
+      />
     </div>
+    <span class="mt-1 block text-[11px] text-(--text-muted)">{{ hint }}</span>
   </div>
 </template>

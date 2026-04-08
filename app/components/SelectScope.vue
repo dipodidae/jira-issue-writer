@@ -6,5 +6,5 @@ const value = defineModel<string[]>({ default: () => ['ui'] })
 </script>
 
 <template>
-  <USelect v-model="value" multiple :items="items" class="w-44" size="sm" placeholder="Scope" />
+  <USelect v-model="value" multiple :items="items" size="sm" placeholder="Scope" />
 </template>

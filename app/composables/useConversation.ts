@@ -32,20 +32,20 @@ function toDraftData(response: PromptResponseDone): PromptDraftData {
   }
 }
 
+const draftInput = ref('')
+const selectedAgent = ref('gpt-5-mini')
+const selectedScope = ref<string[]>(['ui'])
+const messages = ref<ConversationMessage[]>([])
+const latestDraft = ref<PromptDraftData | null>(null)
+const originalPrompt = ref('')
+const previousClarifications = ref<string[]>([])
+const currentStage = ref<PromptStage>('initial')
+const errorMessage = ref<string | null>(null)
+const isPending = ref(false)
+
 export function useConversation() {
   const toast = useToast()
   const loadingIndicator = useLoadingIndicator()
-
-  const draftInput = ref('')
-  const selectedAgent = ref('gpt-5-mini')
-  const selectedScope = ref<string[]>(['ui'])
-  const messages = ref<ConversationMessage[]>([])
-  const latestDraft = ref<PromptDraftData | null>(null)
-  const originalPrompt = ref('')
-  const previousClarifications = ref<string[]>([])
-  const currentStage = ref<PromptStage>('initial')
-  const errorMessage = ref<string | null>(null)
-  const isPending = ref(false)
 
   const hasMessages = computed(() => messages.value.length > 0)
   const canReset = computed(() => hasMessages.value || draftInput.value.trim().length > 0)
@@ -55,26 +55,24 @@ export function useConversation() {
     if (isPending.value)
       return 'Drafting...'
     if (currentStage.value === 'clarify')
-      return 'Answer the clarification to continue...'
+      return 'Answer to continue...'
     if (currentStage.value === 'refine' && latestDraft.value)
-      return 'Refine the current ticket draft...'
-    return 'Describe the issue, bug, or feature request...'
+      return 'Refine this draft...'
+    return 'Describe the issue or feature...'
   })
 
   const composerHint = computed(() => {
-    if (currentStage.value === 'refine' && latestDraft.value)
-      return 'Follow up to revise the current draft. Enter to send, Shift+Enter for newline.'
-    return 'Enter to send, Shift+Enter for newline.'
+    return 'Enter to send, Shift+Enter for newline'
   })
 
   const statusLabel = computed(() => {
     if (isPending.value)
-      return 'Drafting ticket'
+      return 'Drafting'
     if (currentStage.value === 'clarify')
-      return 'Waiting for clarification'
+      return 'Needs info'
     if (currentStage.value === 'refine' && latestDraft.value)
-      return 'Current draft ready for follow-up'
-    return 'Ready for a new draft'
+      return 'Draft ready'
+    return 'Ready'
   })
 
   function resetConversation() {
@@ -136,7 +134,6 @@ export function useConversation() {
 
       toast.add({
         title: hadDraft ? 'Draft updated' : 'Draft created',
-        description: 'The latest Jira draft is now in the conversation.',
         color: 'success',
       })
       return
@@ -159,17 +156,16 @@ export function useConversation() {
       if (response.reason) {
         toast.add({
           title: 'More detail needed',
-          description: response.reason,
           color: 'warning',
         })
       }
       return
     }
 
-    const reason = response.reason || 'The assistant cannot continue without more information.'
+    const reason = response.reason || 'Something went wrong.'
     pushAssistantError(reason)
     toast.add({
-      title: 'Assistant error',
+      title: 'Error',
       description: reason,
       color: 'error',
     })
@@ -241,7 +237,7 @@ export function useConversation() {
       handleResponse(response)
     }
     catch (error: any) {
-      const reason = error?.data?.message || error?.message || 'An unexpected error occurred while contacting the assistant.'
+      const reason = error?.data?.message || error?.message || 'Request failed.'
       pushAssistantError(reason)
       toast.add({
         title: 'Request failed',

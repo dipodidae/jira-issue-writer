@@ -13,15 +13,13 @@ const timestamp = computed(() => {
     minute: '2-digit',
   })
 })
-
-const speakerLabel = computed(() => (isUser.value ? 'You' : 'Assistant'))
 </script>
 
 <template>
-  <div class="flex flex-col gap-2" :class="[isUser ? 'items-end' : 'items-start']">
+  <div class="flex flex-col gap-1" :class="[isUser ? 'items-end' : 'items-start']">
     <div
       v-if="message.kind !== 'draft'"
-      class="max-w-[90%] rounded-2xl px-4 py-3 shadow-sm sm:max-w-[80%]" :class="[
+      class="max-w-[85%] rounded-xl px-3 py-2 text-sm shadow-sm" :class="[
         isUser
           ? 'bg-primary-500 text-white'
           : message.kind === 'error'
@@ -29,17 +27,17 @@ const speakerLabel = computed(() => (isUser.value ? 'You' : 'Assistant'))
             : 'border border-(--border-subtle) bg-(--surface-elevated) text-(--text-primary)',
       ]"
     >
-      <p class="text-sm leading-relaxed whitespace-pre-wrap">
+      <p class="leading-relaxed whitespace-pre-wrap">
         {{ message.content }}
       </p>
     </div>
 
-    <div v-if="message.kind === 'clarification' && message.reason" class="max-w-[90%] rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-xs leading-relaxed text-amber-700 sm:max-w-[80%] dark:text-amber-300">
+    <div v-if="message.kind === 'clarification' && message.reason" class="max-w-[85%] rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
       {{ message.reason }}
     </div>
 
-    <ChatDraftCard v-if="message.kind === 'draft' && message.draft" :draft="message.draft" :is-current="message.isCurrentDraft" class="max-w-4xl" />
+    <ChatDraftCard v-if="message.kind === 'draft' && message.draft" :draft="message.draft" :is-current="message.isCurrentDraft" class="max-w-3xl" />
 
-    <span class="px-1 text-[11px] text-(--text-muted)">{{ speakerLabel }} • {{ timestamp }}</span>
+    <span class="px-1 text-[10px] text-(--text-muted)">{{ timestamp }}</span>
   </div>
 </template>
