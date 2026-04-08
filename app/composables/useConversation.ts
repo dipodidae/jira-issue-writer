@@ -42,6 +42,7 @@ const previousClarifications = ref<string[]>([])
 const currentStage = ref<PromptStage>('initial')
 const errorMessage = ref<string | null>(null)
 const isPending = ref(false)
+const pinnedContext = ref('')
 
 export function useConversation() {
   const toast = useToast()
@@ -50,6 +51,19 @@ export function useConversation() {
   const hasMessages = computed(() => messages.value.length > 0)
   const canReset = computed(() => hasMessages.value || draftInput.value.trim().length > 0)
   const canSubmit = computed(() => draftInput.value.trim().length > 0 && !isPending.value)
+
+  const draftHistory = computed(() => {
+    return messages.value
+      .filter(m => m.kind === 'draft' && m.draft)
+      .map(m => m.draft!)
+  })
+
+  function textWithContext(text: string): string {
+    const ctx = pinnedContext.value.trim()
+    if (!ctx)
+      return text
+    return `[Reference context]:\n${ctx}\n\n[Request]:\n${text}`
+  }
 
   const composerPlaceholder = computed(() => {
     if (isPending.value)
@@ -83,6 +97,7 @@ export function useConversation() {
     previousClarifications.value = []
     currentStage.value = 'initial'
     errorMessage.value = null
+    pinnedContext.value = ''
   }
 
   function pushMessage(message: ConversationMessage) {
@@ -197,7 +212,7 @@ export function useConversation() {
       const clarifications = [...previousClarifications.value, messageText]
       previousClarifications.value = clarifications
       requestBody = {
-        text: originalPrompt.value,
+        text: textWithContext(originalPrompt.value),
         agent: selectedAgent.value,
         scope: selectedScope.value,
         previousClarifications: clarifications,
@@ -206,7 +221,7 @@ export function useConversation() {
     }
     else if (isRefinement && latestDraft.value) {
       requestBody = {
-        text: messageText,
+        text: textWithContext(messageText),
         agent: selectedAgent.value,
         scope: selectedScope.value,
         stage,
@@ -219,7 +234,7 @@ export function useConversation() {
       latestDraft.value = null
       currentStage.value = 'initial'
       requestBody = {
-        text: messageText,
+        text: textWithContext(messageText),
         agent: selectedAgent.value,
         scope: selectedScope.value,
         stage: 'initial',
@@ -256,12 +271,14 @@ export function useConversation() {
     canSubmit,
     composerHint,
     composerPlaceholder,
+    draftHistory,
     draftInput,
     errorMessage,
     hasMessages,
     isPending,
     latestDraft,
     messages,
+    pinnedContext,
     resetConversation,
     selectedAgent,
     selectedScope,
