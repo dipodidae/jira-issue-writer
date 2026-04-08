@@ -25,79 +25,90 @@ const open = defineModel<boolean>('open', { default: false })
 </script>
 
 <template>
-  <UModal v-model:open="open" title="Jira Task Generated" :ui="{ footer: 'justify-end' }">
+  <UModal v-model:open="open" :ui="{ footer: 'justify-end', content: 'sm:max-w-2xl' }">
+    <template #header>
+      <div class="flex items-center gap-3">
+        <IssueTypeBadge :issue-type="data.issueType" />
+        <span class="text-sm font-medium text-(--text-primary)">Generated Ticket</span>
+      </div>
+    </template>
+
     <template #body>
-      <div class="space-y-4">
+      <div class="space-y-5">
+        <!-- Title -->
         <div>
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Issue Type
-          </h3>
-          <IssueTypeBadge :issue-type="data.issueType" />
+          <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Title</label>
+          <div class="flex items-center gap-2 rounded-lg border border-(--border-subtle) bg-(--surface-elevated) px-3 py-2.5">
+            <span class="flex-1 text-sm font-medium text-(--text-primary)">{{ data.title }}</span>
+            <ButtonCopy :value="data.title" />
+          </div>
         </div>
+
+        <!-- Meta pills -->
+        <div v-if="data.priority || data.severity || data.estimate || (data.dataSensitivity && data.dataSensitivity !== 'none')" class="flex flex-wrap gap-2">
+          <span v-if="data.priority" class="bg-primary-500/10 text-primary-600 dark:text-primary-400 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+            <UIcon name="i-lucide-signal" class="size-3" />
+            {{ data.priority }}
+          </span>
+          <span v-if="data.severity" class="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400">
+            <UIcon name="i-lucide-alert-triangle" class="size-3" />
+            {{ data.severity }}
+          </span>
+          <span v-if="data.estimate" class="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+            <UIcon name="i-lucide-clock" class="size-3" />
+            {{ data.estimate }}
+          </span>
+          <span v-if="data.multiItem" class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+            <UIcon name="i-lucide-layers" class="size-3" />
+            Multi-item
+          </span>
+          <span v-if="data.dataSensitivity && data.dataSensitivity !== 'none'" class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+            <UIcon name="i-lucide-shield" class="size-3" />
+            {{ data.dataSensitivity }}
+          </span>
+        </div>
+
+        <!-- Tags row: labels, components, risk areas -->
+        <div v-if="data.labels?.length || data.components?.length || data.riskAreas?.length" class="space-y-3">
+          <div v-if="data.labels?.length">
+            <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Labels</label>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="l in data.labels" :key="l" class="rounded-md bg-(--surface-elevated) px-2 py-0.5 text-xs text-(--text-secondary)">{{ l }}</span>
+            </div>
+          </div>
+          <div v-if="data.components?.length">
+            <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Components</label>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="c in data.components" :key="c" class="rounded-md bg-violet-500/10 px-2 py-0.5 text-xs text-violet-600 dark:text-violet-400">{{ c }}</span>
+            </div>
+          </div>
+          <div v-if="data.riskAreas?.length">
+            <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Risk Areas</label>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="r in data.riskAreas" :key="r" class="rounded-md bg-red-500/10 px-2 py-0.5 text-xs text-red-600 dark:text-red-400">{{ r }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
         <div>
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Title
-          </h3>
-          <UInput :model-value="data.title" readonly :ui="{ trailing: 'pr-0.5' }" class="w-full">
-            <template #trailing>
-              <ButtonCopy :value="data.title" />
-            </template>
-          </UInput>
-        </div>
-        <div v-if="data.priority || data.severity || data.estimate || (data.dataSensitivity && data.dataSensitivity !== 'none')">
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Meta
-          </h3>
-          <div class="flex flex-wrap gap-2 text-xs">
-            <span v-if="data.priority" class="bg-primary/10 rounded px-2 py-1">Priority: {{ data.priority }}</span>
-            <span v-if="data.severity" class="bg-error/10 rounded px-2 py-1">Severity: {{ data.severity }}</span>
-            <span v-if="data.estimate" class="bg-info/10 rounded px-2 py-1">Estimate: {{ data.estimate }}</span>
-            <span v-if="data.multiItem" class="bg-warning/10 rounded px-2 py-1">Multi-item</span>
-            <span v-if="data.dataSensitivity && data.dataSensitivity !== 'none'" class="bg-warning/20 rounded px-2 py-1">Data: {{ data.dataSensitivity }}</span>
-          </div>
-        </div>
-        <div v-if="data.labels?.length">
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Labels
-          </h3>
-          <div class="flex flex-wrap gap-1">
-            <span v-for="l in data.labels" :key="l" class="bg-neutral/10 rounded px-2 py-0.5 text-xs">{{ l }}</span>
-          </div>
-        </div>
-        <div v-if="data.components?.length">
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Components
-          </h3>
-          <div class="flex flex-wrap gap-1">
-            <span v-for="c in data.components" :key="c" class="bg-secondary/10 rounded px-2 py-0.5 text-xs">{{ c }}</span>
-          </div>
-        </div>
-        <div v-if="data.riskAreas?.length">
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Risk Areas
-          </h3>
-          <div class="flex flex-wrap gap-1">
-            <span v-for="r in data.riskAreas" :key="r" class="bg-error/10 rounded px-2 py-0.5 text-xs">{{ r }}</span>
-          </div>
-        </div>
-        <div>
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Description
-          </h3>
+          <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Description</label>
           <MarkdownContentPreview :markdown="data.description" />
         </div>
-        <div v-if="data.acceptanceCriteria?.length" class="mt-2">
-          <h3 class="text-highlighted mb-2 text-sm font-semibold">
-            Acceptance Criteria (Structured)
-          </h3>
-          <ul class="list-disc space-y-1 pl-5 text-xs">
-            <li v-for="ac in data.acceptanceCriteria" :key="ac">
-              {{ ac }}
+
+        <!-- Acceptance Criteria -->
+        <div v-if="data.acceptanceCriteria?.length">
+          <label class="mb-1.5 block text-xs font-medium tracking-wider text-(--text-muted) uppercase">Acceptance Criteria</label>
+          <ul class="space-y-1.5 text-sm text-(--text-secondary)">
+            <li v-for="ac in data.acceptanceCriteria" :key="ac" class="flex items-start gap-2">
+              <UIcon name="i-lucide-check-circle-2" class="mt-0.5 size-4 shrink-0 text-emerald-500" />
+              <span>{{ ac }}</span>
             </li>
           </ul>
         </div>
       </div>
     </template>
+
     <template #footer="{ close }">
       <UButton label="Close" color="neutral" variant="outline" @click="close" />
     </template>

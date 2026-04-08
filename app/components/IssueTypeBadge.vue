@@ -10,7 +10,7 @@ const meta = computed(() => ISSUE_TYPES[props.issueType] || ISSUE_TYPES.task)
 </script>
 
 <template>
-  <UBadge :color="meta.color" variant="solid" class="uppercase">
+  <UBadge :color="meta.color" variant="subtle" size="sm" class="font-medium tracking-wide uppercase">
     {{ meta.label }}
   </UBadge>
 </template>

@@ -6,7 +6,11 @@ const props = defineProps<{
 
 <template>
   <div class="relative">
-    <ButtonCopy :value="props.markdown" class="absolute top-4 right-4 z-10" />
-    <MDC :value="props.markdown" tag="article" class="relative z-0 rounded-md border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-600 dark:bg-neutral-800" />
+    <ButtonCopy :value="props.markdown" class="absolute top-3 right-3 z-10" />
+    <MDC
+      :value="props.markdown"
+      tag="article"
+      class="prose prose-sm dark:prose-invert relative z-0 max-w-none rounded-lg border border-(--border-subtle) bg-(--surface-elevated) p-4"
+    />
   </div>
 </template>

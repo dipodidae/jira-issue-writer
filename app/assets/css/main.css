@@ -2,5 +2,83 @@
 @import '@nuxt/ui';
 
 @theme static {
-  --font-sans: 'Public Sans', sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
+}
+
+/*
+ * Linear-inspired design tokens
+ * Dark-mode-native with indigo-violet accent
+ */
+
+/* Inter OpenType features for geometric alternates */
+html {
+  font-feature-settings: 'cv01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Aggressive negative letter-spacing at display sizes */
+h1,
+.text-display {
+  letter-spacing: -0.04em;
+}
+
+h2 {
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Dark-mode-first surface system */
+.dark {
+  --surface-page: #0a0a0b;
+  --surface-panel: #111113;
+  --surface-elevated: #1a1a1d;
+  --surface-overlay: #222226;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --text-primary: #f0f0f3;
+  --text-secondary: #a0a0ab;
+  --text-muted: #63636e;
+}
+
+:root {
+  --surface-page: #fafafa;
+  --surface-panel: #ffffff;
+  --surface-elevated: #f4f4f5;
+  --surface-overlay: #e4e4e7;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Smooth color transitions for theme switching */
+body {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }

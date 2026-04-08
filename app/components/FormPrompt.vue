@@ -3,8 +3,6 @@ import type { IssueType, PromptResponse, PromptStage } from '#shared/types/api'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-const issueContextDescription = 'Share the relevant context, observed behaviour, expected outcome, and any reproduction steps so the agent can draft a complete Jira ticket.'
-
 const schema = z.object({
   prompt: z.string().min(1, 'Issue context cannot be empty'),
   agent: z.string(),
@@ -47,7 +45,6 @@ const clarificationPrompt = ref('')
 const previousClarifications = ref<string[]>([])
 const currentStage = ref<PromptStage>('initial')
 
-// Use useFetch with immediate: false - extract refs directly
 const { data, error, status, execute } = await useFetch<PromptResponse>('/api/prompt', {
   method: 'POST',
   body: computed(() => ({
@@ -61,7 +58,6 @@ const { data, error, status, execute } = await useFetch<PromptResponse>('/api/pr
   watch: false,
 })
 
-// Computed for error message from extracted error ref
 const errorMessage = computed(() => {
   if (!error.value)
     return null
@@ -122,8 +118,8 @@ function handleDone(response: PromptResponse) {
   clarificationModalOpen.value = false
 
   toast.add({
-    title: 'Success',
-    description: 'Jira task generated successfully!',
+    title: 'Ticket generated',
+    description: 'Your Jira ticket is ready to review.',
     color: 'success',
   })
 }
@@ -194,49 +190,59 @@ async function submitClarification(message: string) {
 
 <template>
   <div>
-    <UAlert
-      color="primary"
-      variant="soft"
-      title="How it works"
-      description="Simply paste any information you have—Slack messages, bug reports, feature requests, or rough notes. Select the relevant scope, choose an agent, and click generate to create a well-structured Jira task."
-      class="mb-6"
-    />
-
     <UForm ref="formRef" :schema="schema" :state="state" @submit="onSubmit">
-      <UFormField
-        label="Issue Context"
-        name="prompt"
-        :description="issueContextDescription"
-      >
+      <!-- Main textarea -->
+      <UFormField name="prompt">
         <UTextarea
           v-model="state.prompt"
           placeholder="Describe the issue, bug, or feature request..."
           class="w-full"
-          :rows="8"
+          :rows="7"
+          autoresize
+          :ui="{
+            base: 'rounded-xl border-[--border-default] bg-(--surface-panel) text-(--text-primary) placeholder:text-(--text-muted) focus:ring-2 focus:ring-primary-500/30',
+          }"
           @keydown="handlePromptKeydown"
         />
+        <template #hint>
+          <span class="text-xs text-(--text-muted)">Enter to submit, Shift+Enter for newline</span>
+        </template>
       </UFormField>
-      <div class="mt-8 flex">
-        <div class="ml-auto flex items-end gap-2">
-          <UFormField label="Scope" name="scope">
+
+      <!-- Controls bar -->
+      <div class="mt-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <UFormField name="scope">
             <SelectScope v-model="state.scope" />
           </UFormField>
-          <UFormField label="Agent" name="agent">
+          <UFormField name="agent">
             <DropdownAgents v-model="state.agent" />
           </UFormField>
-          <UButton icon="mdi:arrow-right" type="submit" :loading="status === 'pending'" :disabled="status === 'pending'">
-            Generate
-          </UButton>
         </div>
+        <UButton
+          type="submit"
+          :loading="status === 'pending'"
+          :disabled="status === 'pending'"
+          size="md"
+          class="px-5"
+        >
+          <UIcon name="i-lucide-sparkles" class="size-4" />
+          Generate
+        </UButton>
       </div>
     </UForm>
 
-    <div v-if="status === 'pending'" class="mt-6">
-      <UAlert title="Processing..." description="Generating Jira task from your input..." />
+    <!-- Loading state -->
+    <div v-if="status === 'pending'" class="mt-8">
+      <div class="flex items-center gap-3 rounded-xl border border-(--border-subtle) bg-(--surface-panel) px-5 py-4">
+        <div class="border-primary-500 size-4 animate-spin rounded-full border-2 border-t-transparent" />
+        <span class="text-sm text-(--text-secondary)">Generating your Jira ticket...</span>
+      </div>
     </div>
 
-    <div v-if="errorMessage" class="mt-6">
-      <UAlert color="error" :title="errorMessage" />
+    <!-- Error state -->
+    <div v-if="errorMessage && status !== 'pending'" class="mt-8">
+      <UAlert color="error" variant="subtle" :title="errorMessage" icon="i-lucide-alert-circle" />
     </div>
 
     <ModalJiraTask v-if="taskResult" v-model:open="taskModalOpen" :data="taskResult" />

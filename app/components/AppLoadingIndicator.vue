@@ -25,9 +25,10 @@ defineExpose({
 
 <template>
   <div
-    class="nuxt-loading-indicator pointer-events-none fixed top-0 right-0 left-0 z-[999999] h-2 w-auto bg-neutral-50 opacity-0" :class="{
-      'bg-error': error,
-      'bg-primary-400 dark:bg-primary-200 opacity-100': isLoading,
+    class="pointer-events-none fixed top-0 right-0 left-0 z-[999999] h-0.5 w-auto opacity-0"
+    :class="{
+      'bg-red-500': error,
+      'bg-primary-500 opacity-100': isLoading,
     }"
     :style="{
       backgroundSize: `${progress > 0 ? (100 / progress) * 100 : 0}% auto`,

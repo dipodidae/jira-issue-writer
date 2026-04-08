@@ -38,12 +38,18 @@ const handleClarificationKeydown = useSubmitOnEnter(() => handleSubmit())
 <template>
   <UModal
     v-model:open="open"
-    title="More Details Needed"
     :ui="{ footer: 'justify-end' }"
   >
+    <template #header>
+      <div class="flex items-center gap-2">
+        <UIcon name="i-lucide-message-circle-question" class="text-primary-500 size-5" />
+        <span class="text-sm font-medium">More Details Needed</span>
+      </div>
+    </template>
+
     <template #body>
       <div class="space-y-4">
-        <p class="text-muted text-sm">
+        <p class="text-sm leading-relaxed text-(--text-secondary)">
           {{ props.prompt }}
         </p>
         <UTextarea
@@ -74,7 +80,8 @@ const handleClarificationKeydown = useSubmitOnEnter(() => handleSubmit())
           @click="close"
         />
         <UButton
-          label="Send Clarification"
+          label="Send"
+          icon="i-lucide-send"
           :loading="props.loading"
           :disabled="submitDisabled"
           @click="handleSubmit"

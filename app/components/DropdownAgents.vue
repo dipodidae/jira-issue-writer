@@ -23,9 +23,9 @@ const isDisabled = computed<boolean>(() => {
     :items="data?.agents || []"
     :icon="selectedIcon"
     value-key="value"
-    placeholder="Select AI model"
-    size="md"
-    class="w-48"
+    placeholder="Model"
+    size="sm"
+    class="w-44"
     :disabled="isDisabled"
   />
 </template>
