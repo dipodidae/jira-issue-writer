@@ -25,7 +25,7 @@ const emit = defineEmits<{
     <div class="mt-3 space-y-1.5">
       <div
         v-for="(task, i) in tasks"
-        :key="i"
+        :key="`split-${i}-${task.title}`"
         class="flex items-start gap-2 rounded-md bg-(--surface-elevated) px-3 py-2"
       >
         <IssueTypeBadge :issue-type="task.issueType" />

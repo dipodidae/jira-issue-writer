@@ -5,6 +5,8 @@ const props = defineProps<{
   draft: PromptDraftData
 }>()
 
+const { copy } = useClipboard()
+
 const fields = computed(() => [
   { label: 'Title', filled: !!props.draft.title },
   { label: 'Description', filled: !!props.draft.description },
@@ -65,13 +67,13 @@ const fullTicketText = computed(() => {
         <span class="text-[10px] text-(--text-muted)">{{ filledCount }}/{{ fields.length }}</span>
         <div class="flex gap-0.5">
           <UTooltip text="Copy title">
-            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-heading" @click="navigator.clipboard.writeText(draft.title)" />
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-heading" @click="copy(draft.title)" />
           </UTooltip>
           <UTooltip text="Copy description">
-            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-file-text" @click="navigator.clipboard.writeText(draft.description)" />
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-file-text" @click="copy(draft.description)" />
           </UTooltip>
           <UTooltip text="Copy full ticket">
-            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-copy" @click="navigator.clipboard.writeText(fullTicketText)" />
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-copy" @click="copy(fullTicketText)" />
           </UTooltip>
         </div>
       </div>

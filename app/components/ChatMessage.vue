@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { ConversationMessage } from '#shared/types/api'
+import type { ConversationMessage, SplitTaskSummary } from '#shared/types/api'
 
 const props = defineProps<{
   message: ConversationMessage
 }>()
 
 defineEmits<{
-  acceptSplit: [tasks: any[]]
+  acceptSplit: [tasks: SplitTaskSummary[]]
   declineSplit: []
 }>()
 

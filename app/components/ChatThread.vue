@@ -37,8 +37,8 @@ const loadingPhrases = [
   'Almost there, probably...',
 ]
 
-const emptyState = computed(() => emptyStateMessages[Math.floor(Date.now() / 60000) % emptyStateMessages.length])
-const loadingPhrase = computed(() => loadingPhrases[Math.floor(Date.now() / 4000) % loadingPhrases.length])
+const emptyState = computed(() => emptyStateMessages[Math.floor(Date.now() / 60000) % emptyStateMessages.length]!)
+const loadingPhrase = computed(() => loadingPhrases[Math.floor(Date.now() / 4000) % loadingPhrases.length]!)
 </script>
 
 <template>

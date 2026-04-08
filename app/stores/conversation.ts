@@ -3,6 +3,7 @@ import type {
   PromptDraftData,
   PromptStage,
 } from '#shared/types/api'
+import { SESSION_TITLE_MAX_LENGTH, STAGE } from '~/constants'
 
 export interface ConversationSession {
   id: string
@@ -29,7 +30,7 @@ function createEmptySession(): ConversationSession {
     latestDraft: null,
     originalPrompt: '',
     previousClarifications: [],
-    currentStage: 'initial',
+    currentStage: STAGE.INITIAL,
     pinnedContext: '',
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -47,10 +48,10 @@ function replaceSession(
 
 export const useConversationStore = defineStore('conversations', () => {
   const sessions = ref<ConversationSession[]>([createEmptySession()])
-  const activeSessionId = ref<string>(sessions.value[0].id)
+  const activeSessionId = ref<string>(sessions.value[0]!.id)
 
-  const activeSession = computed(() => {
-    return sessions.value.find(s => s.id === activeSessionId.value) || sessions.value[0]
+  const activeSession = computed((): ConversationSession => {
+    return sessions.value.find(s => s.id === activeSessionId.value) ?? sessions.value[0]!
   })
 
   const messages = computed(() => activeSession.value.messages)
@@ -108,7 +109,7 @@ export const useConversationStore = defineStore('conversations', () => {
     else {
       sessions.value = filtered
       if (activeSessionId.value === id) {
-        activeSessionId.value = filtered[0].id
+        activeSessionId.value = filtered[0]!.id
       }
     }
   }
@@ -120,7 +121,7 @@ export const useConversationStore = defineStore('conversations', () => {
       latestDraft: null,
       originalPrompt: '',
       previousClarifications: [],
-      currentStage: 'initial' as PromptStage,
+      currentStage: STAGE.INITIAL as PromptStage,
       pinnedContext: '',
       title: 'New draft',
       updatedAt: Date.now(),
@@ -130,7 +131,7 @@ export const useConversationStore = defineStore('conversations', () => {
   function pushMessage(message: ConversationMessage) {
     sessions.value = replaceSession(sessions.value, activeSessionId.value, (s) => {
       const title = s.title === 'New draft' && message.role === 'user'
-        ? message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
+        ? message.content.slice(0, SESSION_TITLE_MAX_LENGTH) + (message.content.length > SESSION_TITLE_MAX_LENGTH ? '...' : '')
         : s.title
       return {
         ...s,

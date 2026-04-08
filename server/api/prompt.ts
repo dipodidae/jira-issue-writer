@@ -4,7 +4,6 @@ import { parseIssueGenerationResult } from '#shared/types/issue-generation'
 import OpenAI from 'openai'
 import { ISSUE_TYPE_GUIDE, ISSUE_TYPE_PROMPT_VALUES, normalizeIssueType } from '~/constants/issue-types'
 import { SCOPE_DESCRIPTIONS } from '~/constants/scopes'
-// (Import ordering enforced above)
 import {
   buildClarificationSystemPrompt,
   buildClarificationUserPrompt,
@@ -33,6 +32,12 @@ interface LegacySufficiencyResult {
   missing_info_prompt?: string
 }
 
+interface ClarificationFields {
+  clarificationRequest?: string
+  missing_info_prompt?: string
+  reason?: string
+}
+
 const SYSTEM_PROMPT = buildSystemPrompt({
   issueGuide: ISSUE_TYPE_GUIDE,
   issueTypeValues: ISSUE_TYPE_PROMPT_VALUES,
@@ -49,7 +54,7 @@ function getOpenAIClient(apiKey: string) {
   return openaiClient
 }
 
-function flatten(content: any): string {
+function flatten(content: unknown): string {
   if (!content)
     return ''
   if (typeof content === 'string')
@@ -57,7 +62,7 @@ function flatten(content: any): string {
   if (Array.isArray(content))
     return content.map(flatten).join('')
   if (typeof content === 'object')
-    return flatten(content.text ?? content.content ?? content.arguments)
+    return flatten((content as Record<string, unknown>).text ?? (content as Record<string, unknown>).content ?? (content as Record<string, unknown>).arguments)
   return ''
 }
 
@@ -87,32 +92,30 @@ async function complete(openai: OpenAI, model: string, messages: ChatMessage[], 
     const res = await openai.chat.completions.create({ model, messages, max_completion_tokens: maxTokens })
     return extractPayload(res.choices[0], 'primary')
   }
-  catch (err: any) {
+  catch (err: unknown) {
     console.error('[prompt] OpenAI API error:', err)
 
-    // Handle specific OpenAI errors
-    if (err.status === 401) {
-      throw createError({ statusCode: 500, message: 'Invalid OpenAI API key' })
-    }
-    if (err.status === 429) {
-      throw createError({ statusCode: 429, message: 'OpenAI rate limit exceeded. Please try again shortly.' })
-    }
-    if (err.status === 400) {
-      throw createError({ statusCode: 502, message: `Invalid request to OpenAI: ${err.message || 'Bad request'}` })
-    }
-    if (err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
-      throw createError({ statusCode: 503, message: 'Cannot reach OpenAI API. Please check network connectivity.' })
+    if (err instanceof OpenAI.APIError) {
+      if (err.status === 401)
+        throw createError({ statusCode: 500, message: 'Invalid OpenAI API key' })
+      if (err.status === 429)
+        throw createError({ statusCode: 429, message: 'OpenAI rate limit exceeded. Please try again shortly.' })
+      if (err.status === 400)
+        throw createError({ statusCode: 502, message: `Invalid request to OpenAI: ${err.message}` })
     }
 
-    // Generic fallback
-    throw createError({
-      statusCode: 502,
-      message: `OpenAI API error: ${err.message || 'Unknown error'}`,
-    })
+    if (err instanceof Error && 'code' in err) {
+      const { code } = err as NodeJS.ErrnoException
+      if (code === 'ENOTFOUND' || code === 'ETIMEDOUT')
+        throw createError({ statusCode: 503, message: 'Cannot reach OpenAI API. Please check network connectivity.' })
+    }
+
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    throw createError({ statusCode: 502, message: `OpenAI API error: ${message}` })
   }
 }
 
-function getApiKey(cfg: any): string {
+function getApiKey(cfg: { openaiApiKey?: string }): string {
   const key = (cfg.openaiApiKey || process.env.NUXT_OPENAI_API_KEY || '').trim()
   if (!key)
     throw createError({ statusCode: 500, message: 'Missing OpenAI API key' })
@@ -165,18 +168,13 @@ function parseJson<T>(input: string): T | null {
     return JSON.parse(input)
   }
   catch {
-    // Attempt to fix common issues: trailing commas, unescaped quotes
     try {
-      // Remove trailing commas before } or ]
       const fixed = input
         .replace(RE_TRAILING_COMMA, '$1')
-        // Try to fix incomplete JSON by adding closing brackets
         .trim()
 
-      if (fixed !== input) {
-        console.warn('[prompt] Attempting to fix malformed JSON')
+      if (fixed !== input)
         return JSON.parse(fixed)
-      }
     }
     catch {
       // If fix attempt fails, return null
@@ -236,7 +234,7 @@ async function buildFallbackClarification(client: OpenAI, model: string, text: s
 }
 
 async function handleNeedsInfo(
-  parsed: any,
+  parsed: ClarificationFields,
   prevClarifications: string[],
   client: OpenAI,
   model: string,
@@ -253,7 +251,7 @@ async function handleNeedsInfo(
   }
 }
 
-function handleJiraEnhanced(rawObj: any, raw: string): PromptResponse {
+function handleJiraEnhanced(rawObj: Record<string, unknown>, raw: string): PromptResponse {
   // Try enhanced schema first.
   const parsedEnhanced = parseIssueGenerationResult(rawObj)
   if (parsedEnhanced.ok && parsedEnhanced.value && parsedEnhanced.value.status === 'enough') {
@@ -276,7 +274,6 @@ function handleJiraEnhanced(rawObj: any, raw: string): PromptResponse {
       dataSensitivity: v.dataSensitivity,
       acceptanceCriteria: v.acceptanceCriteria,
       multiItem: v.multiItem,
-      // Legacy fields preserved; UI can be extended to fetch enriched data separately if needed.
     }
   }
   // Fallback to legacy structure.
@@ -290,17 +287,56 @@ function handleJiraEnhanced(rawObj: any, raw: string): PromptResponse {
   }
   return {
     status: 'done',
-    title: rawObj.title,
-    description: rawObj.description,
+    title: rawObj.title as string,
+    description: rawObj.description as string,
     issueType,
   }
+}
+
+function handleSuggestSplit(parsed: Record<string, unknown>): PromptResponse {
+  const tasks = parsed.proposedTasks as Record<string, unknown>[]
+  return {
+    status: 'suggest_split',
+    reason: String(parsed.reason || 'This looks like it should be multiple tickets.'),
+    proposedTasks: tasks.map(t => ({
+      title: String(t.title || ''),
+      issueType: normalizeIssueType(t.issueType) || 'task',
+      scope: String(t.scope || 'ui'),
+      reason: String(t.reason || ''),
+    })),
+  }
+}
+
+async function dispatchAIResponse(
+  parsed: LegacySufficiencyResult & LegacyJiraTask & Record<string, unknown>,
+  raw: string,
+  clarifications: string[],
+  client: OpenAI,
+  model: string,
+  text: string,
+): Promise<PromptResponse> {
+  if (parsed.status === 'suggest_split' as string && Array.isArray(parsed.proposedTasks))
+    return handleSuggestSplit(parsed)
+
+  if (parsed.status === 'not_enough') {
+    const enhanced = parseIssueGenerationResult(parsed)
+    if (enhanced.ok && enhanced.value && enhanced.value.status === 'not_enough') {
+      return handleNeedsInfo({
+        reason: enhanced.value.reason,
+        clarificationRequest: enhanced.value.clarificationRequest,
+        missing_info_prompt: parsed.missing_info_prompt,
+      }, clarifications, client, model, text)
+    }
+    return handleNeedsInfo(parsed as ClarificationFields, clarifications, client, model, text)
+  }
+
+  return handleJiraEnhanced(parsed, raw)
 }
 
 export default defineEventHandler(async (event): Promise<PromptResponse> => {
   try {
     const cfg = useRuntimeConfig(event)
 
-    // Read and validate body
     let body: PromptRequest
     try {
       body = await readBody<PromptRequest>(event)
@@ -308,7 +344,7 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
         throw createError({ statusCode: 400, message: 'Invalid request body' })
       }
     }
-    catch (err: any) {
+    catch (err: unknown) {
       console.error('[prompt] Failed to parse request body:', err)
       throw createError({ statusCode: 400, message: 'Invalid or missing request body' })
     }
@@ -321,8 +357,6 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     const client = getOpenAIClient(apiKey)
     const model = body.agent ?? 'gpt-4o-mini'
 
-    console.warn(`[prompt] Using model: ${model}`)
-
     const userContent = stage === 'refine'
       ? buildRefinementContext(text, ensureDraft(body.currentDraft), scope)
       : buildIssueContext(appendClarifications(text, clarifications), scope)
@@ -332,7 +366,7 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     ]
 
     const raw = await complete(client, model, messages, 1500)
-    const parsed = parseJson<LegacySufficiencyResult & LegacyJiraTask & Record<string, any>>(raw)
+    const parsed = parseJson<LegacySufficiencyResult & LegacyJiraTask & Record<string, unknown>>(raw)
     if (!parsed) {
       console.error('[prompt] Invalid JSON from model:', raw.slice(0, 500))
       throw createError({
@@ -342,48 +376,21 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
       })
     }
 
-    if (parsed.status === 'suggest_split' && Array.isArray(parsed.proposedTasks)) {
-      return {
-        status: 'suggest_split',
-        reason: parsed.reason || 'This looks like it should be multiple tickets.',
-        proposedTasks: parsed.proposedTasks.map((t: any) => ({
-          title: String(t.title || ''),
-          issueType: normalizeIssueType(t.issueType) || 'task',
-          scope: String(t.scope || 'ui'),
-          reason: String(t.reason || ''),
-        })),
-      }
-    }
-
-    if (parsed.status === 'not_enough') {
-      // Attempt enhanced not_enough parsing for potential richer clarification.
-      const enhanced = parseIssueGenerationResult(parsed)
-      if (enhanced.ok && enhanced.value && enhanced.value.status === 'not_enough') {
-        return handleNeedsInfo({
-          reason: enhanced.value.reason,
-          clarificationRequest: enhanced.value.clarificationRequest,
-          missing_info_prompt: parsed.missing_info_prompt,
-        }, clarifications, client, model, text)
-      }
-      return handleNeedsInfo(parsed, clarifications, client, model, text)
-    }
-    return handleJiraEnhanced(parsed, raw)
+    return await dispatchAIResponse(parsed, raw, clarifications, client, model, text)
   }
-  catch (err: any) {
-    // If it's already a createError H3Error, rethrow it
-    if (err.statusCode) {
-      console.error(`[prompt] Known error (${err.statusCode}):`, err.message)
+  catch (err: unknown) {
+    if (err && typeof err === 'object' && 'statusCode' in err) {
+      const h3Err = err as { statusCode: number, message: string }
+      console.error(`[prompt] Known error (${h3Err.statusCode}):`, h3Err.message)
       throw err
     }
 
-    // Log unexpected errors with full details
     console.error('[prompt] Unexpected error:', err)
-
-    // Return a safe 500 error
+    const message = err instanceof Error ? err.message : String(err)
     throw createError({
       statusCode: 500,
       message: 'An unexpected error occurred while processing your request',
-      data: { error: err.message || String(err) },
+      data: { error: message },
     })
   }
 })
