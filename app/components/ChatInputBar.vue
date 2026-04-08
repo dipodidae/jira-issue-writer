@@ -26,11 +26,8 @@ const handleKeydown = useSubmitOnEnter(() => handleSubmit())
 </script>
 
 <template>
-  <div class="border-t border-(--border-subtle) bg-(--surface-panel) px-5 py-2.5">
-    <div
-      class="flex items-center gap-2 rounded-md border bg-(--surface-page) py-1 pr-1 pl-3 transition-all duration-200"
-      :class="isFocused ? 'border-primary-500/40 shadow-[0_0_12px_rgba(94,106,210,0.12)]' : 'border-(--border-default)'"
-    >
+  <div class="px-5 py-3">
+    <div class="flex items-end gap-2">
       <UTextarea
         v-model="model"
         :rows="1"
@@ -38,7 +35,7 @@ const handleKeydown = useSubmitOnEnter(() => handleSubmit())
         :placeholder="placeholder"
         class="min-h-0 flex-1"
         :ui="{
-          base: 'max-h-32 border-transparent bg-transparent text-sm leading-snug text-(--text-primary) placeholder:text-(--text-muted) focus:ring-0',
+          base: 'max-h-32 rounded-lg border border-(--border-default) bg-(--surface-elevated) px-3 py-2 text-sm leading-snug text-(--text-primary) placeholder:text-(--text-muted) focus:border-primary-500/40 focus:ring-0 transition-colors',
         }"
         @focus="isFocused = true"
         @blur="isFocused = false"
@@ -49,7 +46,7 @@ const handleKeydown = useSubmitOnEnter(() => handleSubmit())
         size="xs"
         :loading="pending"
         :disabled="submitDisabled"
-        class="shrink-0 self-end"
+        class="shrink-0"
         @click="handleSubmit"
       />
     </div>

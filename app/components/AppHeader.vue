@@ -12,7 +12,17 @@ import { appName } from '~/constants'
         </div>
         <span class="text-sm font-semibold tracking-[-0.03em] text-(--text-primary)">{{ appName }}</span>
       </div>
-      <UColorModeButton variant="ghost" size="xs" />
+      <div class="flex items-center gap-1">
+        <UButton
+          to="https://github.com/dipodidae/jira-issue-writer"
+          target="_blank"
+          icon="i-carbon-logo-github"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+        />
+        <UColorModeButton variant="ghost" size="xs" />
+      </div>
     </div>
   </header>
 </template>

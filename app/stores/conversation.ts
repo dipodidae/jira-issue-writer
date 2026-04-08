@@ -174,5 +174,6 @@ export const useConversationStore = defineStore('conversations', () => {
 }, {
   persist: {
     pick: ['sessions', 'activeSessionId'],
+    storage: piniaPluginPersistedstate.localStorage(),
   },
 })

@@ -7,5 +7,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     selectedScope,
   }
 }, {
-  persist: true,
+  persist: {
+    storage: piniaPluginPersistedstate.localStorage(),
+  },
 })

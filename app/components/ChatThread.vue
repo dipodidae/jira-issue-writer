@@ -42,31 +42,33 @@ const loadingPhrase = computed(() => loadingPhrases[Math.floor(Date.now() / 4000
 </script>
 
 <template>
-  <div ref="threadRef" class="flex flex-col gap-3 overflow-y-auto px-5 py-4">
-    <template v-if="messages.length">
-      <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
+  <div ref="threadRef" class="overflow-y-auto">
+    <div class="mx-auto flex w-full max-w-3xl flex-col gap-3 px-5 py-4">
+      <template v-if="messages.length">
+        <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
 
-      <div v-if="pending" class="flex items-start">
-        <div class="rounded-md border border-(--border-default) bg-(--surface-elevated) px-3 py-2 text-sm text-(--text-secondary)">
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-loader-circle" class="text-primary-500 size-3.5 animate-spin" />
-            {{ loadingPhrase }}
+        <div v-if="pending" class="flex items-start">
+          <div class="rounded-md border border-(--border-default) bg-(--surface-elevated) px-3 py-2 text-sm text-(--text-secondary)">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-loader-circle" class="text-primary-500 size-3.5 animate-spin" />
+              {{ loadingPhrase }}
+            </div>
           </div>
         </div>
-      </div>
-    </template>
+      </template>
 
-    <div v-else class="grid flex-1 place-items-center">
-      <div class="text-center">
-        <div class="bg-primary-500/8 text-primary-500 mx-auto flex size-12 items-center justify-center rounded-2xl">
-          <UIcon name="i-lucide-messages-square" class="size-6" />
+      <div v-else class="grid flex-1 place-items-center">
+        <div class="text-center">
+          <div class="bg-primary-500/8 text-primary-500 mx-auto flex size-12 items-center justify-center rounded-2xl">
+            <UIcon name="i-lucide-messages-square" class="size-6" />
+          </div>
+          <p class="mt-3 text-base font-semibold tracking-tight text-(--text-primary)">
+            {{ emptyState.heading }}
+          </p>
+          <p class="mt-1 text-xs text-(--text-muted)">
+            {{ emptyState.sub }}
+          </p>
         </div>
-        <p class="mt-3 text-base font-semibold tracking-tight text-(--text-primary)">
-          {{ emptyState.heading }}
-        </p>
-        <p class="mt-1 text-xs text-(--text-muted)">
-          {{ emptyState.sub }}
-        </p>
       </div>
     </div>
   </div>
