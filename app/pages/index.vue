@@ -1,16 +1,20 @@
 <script setup lang="ts">
 const {
+  activeSessionId,
   canReset,
+  createSession,
+  deleteSession,
   draftHistory,
   draftInput,
   hasMessages,
   isPending,
   latestDraft,
   pinnedContext,
-  resetConversation,
   selectedAgent,
   selectedScope,
+  sessions,
   statusLabel,
+  switchSession,
 } = useConversation()
 
 function applyTemplate(text: string) {
@@ -48,16 +52,23 @@ function applyTemplate(text: string) {
 
       <SidebarRecentDrafts :drafts="draftHistory" />
 
+      <SidebarSessionList
+        :sessions="sessions"
+        :active-id="activeSessionId"
+        @switch="switchSession"
+        @delete="deleteSession"
+      />
+
       <div class="mt-auto space-y-3">
         <SidebarShortcuts />
         <UButton
           color="neutral"
           variant="soft"
-          icon="i-lucide-rotate-ccw"
+          icon="i-lucide-plus"
           size="sm"
           block
           :disabled="!canReset || isPending"
-          @click="resetConversation"
+          @click="createSession"
         >
           New draft
         </UButton>

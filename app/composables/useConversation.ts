@@ -1,11 +1,10 @@
 import type {
-  ConversationMessage,
   PromptDraftData,
   PromptRequest,
   PromptResponse,
   PromptResponseDone,
-  PromptStage,
 } from '#shared/types/api'
+import { SCOPE_DESCRIPTIONS } from '~/constants'
 
 function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -33,44 +32,25 @@ function toDraftData(response: PromptResponseDone): PromptDraftData {
 }
 
 const draftInput = ref('')
-const selectedAgent = ref('gpt-4o-mini')
-const selectedScope = ref<string[]>(['ui'])
-const messages = ref<ConversationMessage[]>([])
-const latestDraft = ref<PromptDraftData | null>(null)
-const originalPrompt = ref('')
-const previousClarifications = ref<string[]>([])
-const currentStage = ref<PromptStage>('initial')
 const errorMessage = ref<string | null>(null)
 const isPending = ref(false)
-const pinnedContext = ref('')
 
 export function useConversation() {
   const toast = useToast()
   const loadingIndicator = useLoadingIndicator()
+  const store = useConversationStore()
+  const prefs = usePreferencesStore()
 
-  const hasMessages = computed(() => messages.value.length > 0)
+  const hasMessages = computed(() => store.hasMessages)
   const canReset = computed(() => hasMessages.value || draftInput.value.trim().length > 0)
   const canSubmit = computed(() => draftInput.value.trim().length > 0 && !isPending.value)
-
-  const draftHistory = computed(() => {
-    return messages.value
-      .filter(m => m.kind === 'draft' && m.draft)
-      .map(m => m.draft!)
-  })
-
-  function textWithContext(text: string): string {
-    const ctx = pinnedContext.value.trim()
-    if (!ctx)
-      return text
-    return `[Reference context]:\n${ctx}\n\n[Request]:\n${text}`
-  }
 
   const composerPlaceholder = computed(() => {
     if (isPending.value)
       return 'Drafting...'
-    if (currentStage.value === 'clarify')
+    if (store.currentStage === 'clarify')
       return 'Answer to continue...'
-    if (currentStage.value === 'refine' && latestDraft.value)
+    if (store.currentStage === 'refine' && store.latestDraft)
       return 'Refine this draft...'
     return 'Describe the issue or feature...'
   })
@@ -82,42 +62,47 @@ export function useConversation() {
   const statusLabel = computed(() => {
     if (isPending.value)
       return 'Drafting'
-    if (currentStage.value === 'clarify')
+    if (store.currentStage === 'clarify')
       return 'Needs info'
-    if (currentStage.value === 'refine' && latestDraft.value)
+    if (store.currentStage === 'refine' && store.latestDraft)
       return 'Draft ready'
     return 'Ready'
   })
 
+  function buildContextPrefix(text: string): string {
+    const parts: string[] = []
+
+    // Scope descriptions — tells the AI what areas to focus on
+    const scopes = prefs.selectedScope
+    if (scopes.length) {
+      const scopeLines = scopes
+        .map(s => SCOPE_DESCRIPTIONS.get(s))
+        .filter(Boolean)
+        .map((desc, i) => `- ${scopes[i]}: ${desc}`)
+      if (scopeLines.length) {
+        parts.push(`[Scope focus]:\n${scopeLines.join('\n')}`)
+      }
+    }
+
+    // Pinned context
+    const ctx = store.pinnedContext.trim()
+    if (ctx) {
+      parts.push(`[Reference context]:\n${ctx}`)
+    }
+
+    if (!parts.length)
+      return text
+    return `${parts.join('\n\n')}\n\n[Request]:\n${text}`
+  }
+
   function resetConversation() {
     draftInput.value = ''
-    messages.value = []
-    latestDraft.value = null
-    originalPrompt.value = ''
-    previousClarifications.value = []
-    currentStage.value = 'initial'
     errorMessage.value = null
-    pinnedContext.value = ''
-  }
-
-  function pushMessage(message: ConversationMessage) {
-    messages.value = [...messages.value, message]
-  }
-
-  function markPreviousDraftsAsHistory() {
-    messages.value = messages.value.map((message) => {
-      if (message.kind !== 'draft')
-        return message
-
-      return {
-        ...message,
-        isCurrentDraft: false,
-      }
-    })
+    store.resetActiveSession()
   }
 
   function pushAssistantError(reason: string) {
-    pushMessage({
+    store.pushMessage({
       id: createMessageId(),
       role: 'assistant',
       kind: 'error',
@@ -130,14 +115,13 @@ export function useConversation() {
   function handleResponse(response: PromptResponse) {
     if (response.status === 'done') {
       const draft = toDraftData(response)
-      const hadDraft = !!latestDraft.value
+      const hadDraft = !!store.latestDraft
 
-      markPreviousDraftsAsHistory()
-      latestDraft.value = draft
-      currentStage.value = 'refine'
+      store.markPreviousDraftsAsHistory()
+      store.updateSession({ latestDraft: draft, currentStage: 'refine' })
       errorMessage.value = null
 
-      pushMessage({
+      store.pushMessage({
         id: createMessageId(),
         role: 'assistant',
         kind: 'draft',
@@ -156,10 +140,12 @@ export function useConversation() {
 
     if (response.status === 'needs_info') {
       const clarificationPrompt = response.missingInfoPrompt || 'What additional details would clarify the issue?'
-      currentStage.value = latestDraft.value ? 'refine' : 'clarify'
+      store.updateSession({
+        currentStage: store.latestDraft ? 'refine' : 'clarify',
+      })
       errorMessage.value = null
 
-      pushMessage({
+      store.pushMessage({
         id: createMessageId(),
         role: 'assistant',
         kind: 'clarification',
@@ -191,11 +177,12 @@ export function useConversation() {
     if (!messageText || isPending.value)
       return
 
-    const stage = currentStage.value
+    const session = store.activeSession
+    const stage = session.currentStage
     const isClarification = stage === 'clarify'
-    const isRefinement = stage === 'refine' && !!latestDraft.value
+    const isRefinement = stage === 'refine' && !!session.latestDraft
 
-    pushMessage({
+    store.pushMessage({
       id: createMessageId(),
       role: 'user',
       kind: 'prompt',
@@ -209,34 +196,36 @@ export function useConversation() {
     let requestBody: PromptRequest
 
     if (isClarification) {
-      const clarifications = [...previousClarifications.value, messageText]
-      previousClarifications.value = clarifications
+      const clarifications = [...session.previousClarifications, messageText]
+      store.updateSession({ previousClarifications: clarifications })
       requestBody = {
-        text: textWithContext(originalPrompt.value),
-        agent: selectedAgent.value,
-        scope: selectedScope.value,
+        text: buildContextPrefix(session.originalPrompt),
+        agent: prefs.selectedAgent,
+        scope: prefs.selectedScope,
         previousClarifications: clarifications,
         stage,
       }
     }
-    else if (isRefinement && latestDraft.value) {
+    else if (isRefinement && session.latestDraft) {
       requestBody = {
-        text: textWithContext(messageText),
-        agent: selectedAgent.value,
-        scope: selectedScope.value,
+        text: buildContextPrefix(messageText),
+        agent: prefs.selectedAgent,
+        scope: prefs.selectedScope,
         stage,
-        currentDraft: latestDraft.value,
+        currentDraft: session.latestDraft,
       }
     }
     else {
-      originalPrompt.value = messageText
-      previousClarifications.value = []
-      latestDraft.value = null
-      currentStage.value = 'initial'
+      store.updateSession({
+        originalPrompt: messageText,
+        previousClarifications: [],
+        latestDraft: null,
+        currentStage: 'initial',
+      })
       requestBody = {
-        text: textWithContext(messageText),
-        agent: selectedAgent.value,
-        scope: selectedScope.value,
+        text: buildContextPrefix(messageText),
+        agent: prefs.selectedAgent,
+        scope: prefs.selectedScope,
         stage: 'initial',
       }
     }
@@ -267,22 +256,47 @@ export function useConversation() {
   }
 
   return {
+    // State
     canReset,
     canSubmit,
     composerHint,
     composerPlaceholder,
-    draftHistory,
+    draftHistory: computed(() => store.draftHistory),
     draftInput,
     errorMessage,
     hasMessages,
     isPending,
-    latestDraft,
-    messages,
-    pinnedContext,
-    resetConversation,
-    selectedAgent,
-    selectedScope,
+    latestDraft: computed(() => store.latestDraft),
+    messages: computed(() => store.messages),
+    pinnedContext: computed({
+      get: () => store.pinnedContext,
+      set: (val: string) => { store.pinnedContext = val },
+    }),
+    selectedAgent: computed({
+      get: () => prefs.selectedAgent,
+      set: (val: string) => { prefs.selectedAgent = val },
+    }),
+    selectedScope: computed({
+      get: () => prefs.selectedScope,
+      set: (val: string[]) => { prefs.selectedScope = val },
+    }),
     statusLabel,
+
+    // Session management
+    sessions: computed(() => store.sortedSessions),
+    activeSessionId: computed(() => store.activeSessionId),
+    createSession: () => {
+      store.createSession()
+      draftInput.value = ''
+    },
+    switchSession: (id: string) => {
+      store.switchSession(id)
+      draftInput.value = ''
+    },
+    deleteSession: store.deleteSession,
+
+    // Actions
+    resetConversation,
     submitCurrentMessage,
   }
 }

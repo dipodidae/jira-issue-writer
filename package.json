@@ -15,7 +15,8 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "openai": "catalog:frontend"
+    "openai": "catalog:frontend",
+    "pinia-plugin-persistedstate": "catalog:frontend"
   },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:dev",

@@ -6,6 +6,7 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/mdc',
     '@pinia/nuxt',
+    'pinia-plugin-persistedstate/nuxt',
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
   ],
