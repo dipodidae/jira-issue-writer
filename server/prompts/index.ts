@@ -1,6 +1,7 @@
 import clarificationSystemTemplate from './clarification-system'
 import clarificationUserTemplate from './clarification-user'
 import issueTemplate from './issue'
+import refineTemplate from './refine'
 import systemTemplate from './system'
 
 interface TemplateValues {
@@ -31,6 +32,15 @@ export function buildSystemPrompt(values: { issueGuide: string, issueTypeValues:
 export function buildIssuePrompt(values: { context: string, scopeDetails: string, prefix: string }) {
   return renderTemplate(issueTemplate, {
     CONTEXT: values.context,
+    SCOPE_DETAILS: values.scopeDetails,
+    PREFIX: values.prefix,
+  })
+}
+
+export function buildRefinementPrompt(values: { currentDraft: string, request: string, scopeDetails: string, prefix: string }) {
+  return renderTemplate(refineTemplate, {
+    CURRENT_DRAFT: values.currentDraft,
+    REQUEST: values.request,
     SCOPE_DETAILS: values.scopeDetails,
     PREFIX: values.prefix,
   })

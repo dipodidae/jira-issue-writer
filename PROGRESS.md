@@ -28,6 +28,12 @@ This file tracks the incremental migration to Vue 3 Composition API + TypeScript
 
 ## Recent Fixes
 
+- [x] **2026-04-08**: Started chat-style ticket drafting migration
+  - Replaced textarea-plus-modal orchestration with an inline conversation shell
+  - Added conversation state/composable and chat thread components
+  - Added backend refinement mode so follow-up messages can revise the latest draft
+  - Preserved structured Jira output validation through the existing response parser
+
 - [x] **2025-10-20**: Fixed 500 errors on live by adding comprehensive error handling to `/api/prompt`
   - Added try-catch around OpenAI API calls with specific error codes (401, 429, 400, 503)
   - Added request body validation

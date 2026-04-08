@@ -2,7 +2,7 @@
  * API request and response types for the prompt endpoint
  */
 
-export type PromptStage = 'initial' | 'clarify'
+export type PromptStage = 'initial' | 'clarify' | 'refine'
 
 export type IssueType
   = | 'bug'
@@ -16,24 +16,10 @@ export type IssueType
     | 'qa'
     | 'documentation'
 
-export interface PromptRequest {
-  text: string
-  agent?: string
-  scope?: string[]
-  previousClarifications?: string[]
-  stage?: PromptStage
-}
-
-export type PromptStatus = 'done' | 'needs_info' | 'error'
-
-export interface PromptResponse {
-  status: PromptStatus
-  title?: string
-  description?: string
-  issueType?: IssueType
-  reason?: string
-  missingInfoPrompt?: string
-  // Enriched issue fields (populated when generation succeeds with enhanced schema)
+export interface PromptDraftData {
+  title: string
+  description: string
+  issueType: IssueType
   scope?: string
   priority?: 'highest' | 'high' | 'medium' | 'low' | null
   severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
@@ -47,6 +33,49 @@ export interface PromptResponse {
   dataSensitivity?: 'none' | 'contains-pii' | 'contains-financial' | 'unknown'
   acceptanceCriteria?: string[]
   multiItem?: boolean
+}
+
+export interface PromptRequest {
+  text: string
+  agent?: string
+  scope?: string[]
+  previousClarifications?: string[]
+  stage?: PromptStage
+  currentDraft?: PromptDraftData | null
+}
+
+export type PromptStatus = 'done' | 'needs_info' | 'error'
+
+export interface PromptResponseDone extends PromptDraftData {
+  status: 'done'
+}
+
+export interface PromptResponseNeedsInfo {
+  status: 'needs_info'
+  reason?: string
+  missingInfoPrompt?: string
+}
+
+export interface PromptResponseError {
+  status: 'error'
+  reason?: string
+}
+
+export type PromptResponse = PromptResponseDone | PromptResponseNeedsInfo | PromptResponseError
+
+export type ConversationMessageRole = 'user' | 'assistant'
+
+export type ConversationMessageKind = 'prompt' | 'clarification' | 'draft' | 'error'
+
+export interface ConversationMessage {
+  id: string
+  role: ConversationMessageRole
+  kind: ConversationMessageKind
+  content: string
+  createdAt: number
+  reason?: string
+  draft?: PromptDraftData
+  isCurrentDraft?: boolean
 }
 
 /**

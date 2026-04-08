@@ -1,14 +1,20 @@
 <script setup lang="ts">
+interface RichSourceElement {
+  $el?: HTMLElement | null
+}
+
 const props = defineProps<{
   value: string
-  richSource?: HTMLElement | null
+  richSource?: HTMLElement | RichSourceElement | null
 }>()
 
 const copied = ref(false)
 
 async function copyContent() {
   try {
-    const el = props.richSource?.$el ?? props.richSource
+    const el = props.richSource instanceof HTMLElement
+      ? props.richSource
+      : props.richSource?.$el ?? null
     if (el instanceof HTMLElement) {
       const html = el.innerHTML
       const plain = el.textContent || ''

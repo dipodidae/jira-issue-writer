@@ -1,4 +1,4 @@
-import type { IssueType, PromptRequest, PromptResponse } from '#shared/types/api'
+import type { IssueType, PromptDraftData, PromptRequest, PromptResponse } from '#shared/types/api'
 import process from 'node:process'
 import { parseIssueGenerationResult } from '#shared/types/issue-generation'
 import OpenAI from 'openai'
@@ -9,6 +9,7 @@ import {
   buildClarificationSystemPrompt,
   buildClarificationUserPrompt,
   buildIssuePrompt,
+  buildRefinementPrompt,
   buildSystemPrompt,
 } from '../prompts'
 import { sanitizeJsonResponse } from '../utils/json-sanitizer'
@@ -145,6 +146,21 @@ function buildIssueContext(context: string, scope: string[]) {
   return buildIssuePrompt({ context, scopeDetails: details, prefix })
 }
 
+function buildRefinementContext(request: string, currentDraft: PromptDraftData, scope: string[]) {
+  const normalizedScope = scope.length ? scope : [currentDraft.scope || 'ui']
+  const prefix = normalizedScope.map(s => s.toUpperCase()).join('+')
+  const details = normalizedScope
+    .map(s => `- ${s.toUpperCase()}: ${SCOPE_DESCRIPTIONS.get(s) || 'General scope.'}`)
+    .join('\n')
+
+  return buildRefinementPrompt({
+    currentDraft: JSON.stringify(currentDraft, null, 2),
+    request,
+    scopeDetails: details,
+    prefix,
+  })
+}
+
 function parseJson<T>(input: string): T | null {
   try {
     return JSON.parse(input)
@@ -167,6 +183,42 @@ function parseJson<T>(input: string): T | null {
       // If fix attempt fails, return null
     }
     return null
+  }
+}
+
+function ensureDraft(draft: unknown): PromptDraftData {
+  if (!draft || typeof draft !== 'object')
+    throw createError({ statusCode: 400, message: 'Missing current draft for refinement' })
+
+  const normalizedDraft = draft as Record<string, unknown>
+  const title = typeof normalizedDraft.title === 'string' ? normalizedDraft.title.trim() : ''
+  const description = typeof normalizedDraft.description === 'string' ? normalizedDraft.description.trim() : ''
+  const issueType = normalizeIssueType(normalizedDraft.issueType)
+
+  if (!title || !description || !issueType) {
+    throw createError({
+      statusCode: 400,
+      message: 'Current draft is incomplete and cannot be refined',
+    })
+  }
+
+  return {
+    title,
+    description,
+    issueType,
+    scope: typeof normalizedDraft.scope === 'string' ? normalizedDraft.scope : undefined,
+    priority: normalizedDraft.priority as PromptDraftData['priority'],
+    severity: normalizedDraft.severity as PromptDraftData['severity'],
+    labels: Array.isArray(normalizedDraft.labels) ? normalizedDraft.labels.filter(label => typeof label === 'string') as string[] : undefined,
+    components: Array.isArray(normalizedDraft.components) ? normalizedDraft.components.filter(component => typeof component === 'string') as string[] : undefined,
+    epicLink: typeof normalizedDraft.epicLink === 'string' || normalizedDraft.epicLink === null ? normalizedDraft.epicLink as string | null : undefined,
+    parent: typeof normalizedDraft.parent === 'string' || normalizedDraft.parent === null ? normalizedDraft.parent as string | null : undefined,
+    dependencies: Array.isArray(normalizedDraft.dependencies) ? normalizedDraft.dependencies.filter(dependency => typeof dependency === 'string') as string[] : undefined,
+    estimate: typeof normalizedDraft.estimate === 'string' || normalizedDraft.estimate === null ? normalizedDraft.estimate as string | null : undefined,
+    riskAreas: Array.isArray(normalizedDraft.riskAreas) ? normalizedDraft.riskAreas.filter(area => typeof area === 'string') as string[] : undefined,
+    dataSensitivity: normalizedDraft.dataSensitivity as PromptDraftData['dataSensitivity'],
+    acceptanceCriteria: Array.isArray(normalizedDraft.acceptanceCriteria) ? normalizedDraft.acceptanceCriteria.filter(criteria => typeof criteria === 'string') as string[] : undefined,
+    multiItem: typeof normalizedDraft.multiItem === 'boolean' ? normalizedDraft.multiItem : undefined,
   }
 }
 
@@ -270,12 +322,15 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     const text = ensureText(body.text)
     const scope = normalize.scope(body.scope)
     const clarifications = normalize.clarifications(body.previousClarifications)
+    const stage = body.stage ?? 'initial'
     const client = getOpenAIClient(apiKey)
     const model = body.agent ?? 'gpt-4o-mini'
 
     console.warn(`[prompt] Using model: ${model}`)
 
-    const userContent = buildIssueContext(appendClarifications(text, clarifications), scope)
+    const userContent = stage === 'refine'
+      ? buildRefinementContext(text, ensureDraft(body.currentDraft), scope)
+      : buildIssueContext(appendClarifications(text, clarifications), scope)
     const messages: ChatMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },
