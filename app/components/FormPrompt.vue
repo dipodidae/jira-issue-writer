@@ -175,6 +175,13 @@ async function onSubmit(_event: FormSubmitEvent<Schema>) {
   await runPrompt()
 }
 
+const formRef = ref<{ $el: HTMLFormElement } | null>(null)
+const handlePromptKeydown = useSubmitOnEnter(() => {
+  if (status.value === 'pending')
+    return
+  formRef.value?.$el?.requestSubmit()
+})
+
 async function submitClarification(message: string) {
   previousClarifications.value = [...previousClarifications.value, message]
   currentStage.value = 'clarify'
@@ -195,7 +202,7 @@ async function submitClarification(message: string) {
       class="mb-6"
     />
 
-    <UForm :schema="schema" :state="state" @submit="onSubmit">
+    <UForm ref="formRef" :schema="schema" :state="state" @submit="onSubmit">
       <UFormField
         label="Issue Context"
         name="prompt"
@@ -206,6 +213,7 @@ async function submitClarification(message: string) {
           placeholder="Describe the issue, bug, or feature request..."
           class="w-full"
           :rows="8"
+          @keydown="handlePromptKeydown"
         />
       </UFormField>
       <div class="mt-8 flex">

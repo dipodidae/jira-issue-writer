@@ -31,6 +31,8 @@ function handleSubmit() {
 
   emit('submit', trimmedClarification.value)
 }
+
+const handleClarificationKeydown = useSubmitOnEnter(() => handleSubmit())
 </script>
 
 <template>
@@ -50,6 +52,7 @@ function handleSubmit() {
           :rows="5"
           autofocus
           class="w-full"
+          @keydown="handleClarificationKeydown"
         />
       </div>
     </template>
