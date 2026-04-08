@@ -3,7 +3,7 @@ import { appName } from '~/constants'
 </script>
 
 <template>
-  <header class="z-50 border-b border-(--border-subtle) bg-(--surface-panel)/80 backdrop-blur-xl">
+  <header class="z-50 border-b border-(--border-subtle) bg-(--surface-panel)">
     <div class="flex h-11 items-center justify-between px-4">
       <div class="flex items-center gap-2">
         <div class="bg-primary-500/10 flex size-6 items-center justify-center rounded-md">

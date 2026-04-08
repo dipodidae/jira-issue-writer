@@ -13,7 +13,7 @@ const articleRef = ref<HTMLElement | null>(null)
       ref="articleRef"
       :value="props.markdown"
       tag="article"
-      class="prose prose-sm dark:prose-invert relative z-0 max-w-none rounded-lg border border-(--border-subtle) bg-(--surface-elevated) p-4"
+      class="prose prose-sm dark:prose-invert relative z-0 max-w-none rounded-md border border-(--border-default) bg-(--surface-elevated) p-4"
     />
   </div>
 </template>

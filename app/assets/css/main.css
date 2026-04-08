@@ -32,29 +32,33 @@ h3 {
   letter-spacing: -0.02em;
 }
 
-/* Surface system — light defaults, dark override */
+/*
+ * Surface system — aligned to Linear's luminance scale
+ * Light: functional defaults
+ * Dark: near-black canvas, elevation via bg opacity stepping
+ */
 :root {
-  --surface-page: #fafafa;
+  --surface-page: #f7f8f8;
   --surface-panel: #ffffff;
-  --surface-elevated: #f4f4f5;
+  --surface-elevated: #f3f4f5;
   --surface-overlay: #e4e4e7;
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-default: rgba(0, 0, 0, 0.1);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-default: rgba(0, 0, 0, 0.08);
   --text-primary: #18181b;
   --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
+  --text-muted: #8a8f98;
 }
 
 .dark {
-  --surface-page: #0a0a0b;
-  --surface-panel: #111113;
-  --surface-elevated: #1a1a1d;
-  --surface-overlay: #222226;
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --text-primary: #f0f0f3;
-  --text-secondary: #a0a0ab;
-  --text-muted: #63636e;
+  --surface-page: #08090a;
+  --surface-panel: #0f1011;
+  --surface-elevated: #191a1b;
+  --surface-overlay: #28282c;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --text-primary: #f7f8f8;
+  --text-secondary: #d0d6e0;
+  --text-muted: #8a8f98;
 }
 
 /* Custom scrollbar for dark mode */

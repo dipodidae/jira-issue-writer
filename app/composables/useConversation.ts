@@ -33,7 +33,7 @@ function toDraftData(response: PromptResponseDone): PromptDraftData {
 }
 
 const draftInput = ref('')
-const selectedAgent = ref('gpt-5-mini')
+const selectedAgent = ref('gpt-4o-mini')
 const selectedScope = ref<string[]>(['ui'])
 const messages = ref<ConversationMessage[]>([])
 const latestDraft = ref<PromptDraftData | null>(null)

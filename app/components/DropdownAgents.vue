@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AgentsResponse } from '#shared/types/api'
 
-const model = defineModel<string>({ default: 'gpt-5-mini' })
+const model = defineModel<string>({ default: 'gpt-4o-mini' })
 
 const { data, status } = await useFetch<AgentsResponse>('/api/agents')
 

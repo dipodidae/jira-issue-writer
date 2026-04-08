@@ -11,7 +11,7 @@ const {
 
 <template>
   <div class="contents">
-    <aside class="flex min-h-0 flex-col gap-6 overflow-y-auto border-r border-(--border-subtle) bg-(--surface-panel) px-4 py-5">
+    <aside class="flex min-h-0 flex-col gap-5 overflow-y-auto border-r border-(--border-subtle) bg-(--surface-panel) px-3 py-4">
       <div>
         <div class="flex items-center gap-1.5 text-xs text-(--text-muted)">
           <span
