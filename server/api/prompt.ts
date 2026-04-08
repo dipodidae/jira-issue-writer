@@ -33,7 +33,6 @@ interface LegacySufficiencyResult {
   missing_info_prompt?: string
 }
 
-const MAX_CLARIFICATIONS = 3
 const SYSTEM_PROMPT = buildSystemPrompt({
   issueGuide: ISSUE_TYPE_GUIDE,
   issueTypeValues: ISSUE_TYPE_PROMPT_VALUES,
@@ -243,10 +242,6 @@ async function handleNeedsInfo(
   model: string,
   text: string,
 ): Promise<PromptResponse> {
-  // Enhanced path: if clarificationRequest present from new schema use it.
-  if (prevClarifications.length >= MAX_CLARIFICATIONS)
-    return { status: 'error', reason: `Reached the maximum number of clarification rounds (${MAX_CLARIFICATIONS}).` }
-
   const prompt = parsed.clarificationRequest?.trim()
     || parsed.missing_info_prompt?.trim()
     || await buildFallbackClarification(client, model, text, prevClarifications)
@@ -336,7 +331,7 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
       { role: 'user', content: userContent },
     ]
 
-    const raw = await complete(client, model, messages, 800) // Increased for enhanced schema
+    const raw = await complete(client, model, messages, 1500)
     const parsed = parseJson<LegacySufficiencyResult & LegacyJiraTask & Record<string, any>>(raw)
     if (!parsed) {
       console.error('[prompt] Invalid JSON from model:', raw.slice(0, 500))

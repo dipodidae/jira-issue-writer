@@ -45,13 +45,13 @@ const fullTicketText = computed(() => {
     <span class="mb-1.5 block text-[11px] font-medium tracking-wider text-(--text-muted) uppercase">Current draft</span>
 
     <div class="rounded-md border border-(--border-default) bg-(--surface-elevated) p-2.5">
-      <div class="flex items-start gap-2">
-        <IssueTypeBadge :issue-type="draft.issueType" />
-        <span class="flex-1 text-xs leading-snug font-medium text-(--text-primary)">{{ draft.title }}</span>
-      </div>
+      <IssueTypeBadge :issue-type="draft.issueType" />
+      <p class="mt-1.5 text-xs leading-snug font-medium text-(--text-primary)">
+        {{ draft.title }}
+      </p>
 
-      <div class="mt-2.5 space-y-1">
-        <div v-for="field in fields" :key="field.label" class="flex items-center gap-1.5 text-[11px]">
+      <div class="mt-3 grid grid-cols-2 gap-x-2 gap-y-0.5">
+        <div v-for="field in fields" :key="field.label" class="flex items-center gap-1 text-[11px]">
           <UIcon
             :name="field.filled ? 'i-lucide-check-circle-2' : 'i-lucide-circle'"
             class="size-3 shrink-0"
@@ -61,21 +61,20 @@ const fullTicketText = computed(() => {
         </div>
       </div>
 
-      <div class="mt-2.5 text-[11px] text-(--text-muted)">
-        {{ filledCount }}/{{ fields.length }} fields
+      <div class="mt-2 flex items-center justify-between">
+        <span class="text-[10px] text-(--text-muted)">{{ filledCount }}/{{ fields.length }}</span>
+        <div class="flex gap-0.5">
+          <UTooltip text="Copy title">
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-heading" @click="navigator.clipboard.writeText(draft.title)" />
+          </UTooltip>
+          <UTooltip text="Copy description">
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-file-text" @click="navigator.clipboard.writeText(draft.description)" />
+          </UTooltip>
+          <UTooltip text="Copy full ticket">
+            <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-copy" @click="navigator.clipboard.writeText(fullTicketText)" />
+          </UTooltip>
+        </div>
       </div>
-    </div>
-
-    <div class="mt-2 flex flex-wrap gap-1">
-      <UTooltip text="Copy title">
-        <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-heading" @click="navigator.clipboard.writeText(draft.title)" />
-      </UTooltip>
-      <UTooltip text="Copy description">
-        <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-file-text" @click="navigator.clipboard.writeText(draft.description)" />
-      </UTooltip>
-      <UTooltip text="Copy full ticket">
-        <UButton color="neutral" variant="ghost" size="xs" icon="i-lucide-copy" @click="navigator.clipboard.writeText(fullTicketText)" />
-      </UTooltip>
     </div>
   </div>
 </template>
