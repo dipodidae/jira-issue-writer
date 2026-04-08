@@ -18,6 +18,8 @@ export default antfu(
       '**/RATE_LIMITER_EXPLAINED.md',
       '**/SETUP.md',
       '**/DropdownAgents.md',
+      'docs/**',
+      '.agents/skills/**',
     ],
   },
 )
