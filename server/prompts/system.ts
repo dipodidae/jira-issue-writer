@@ -16,12 +16,13 @@ OUTPUT RULES (STRICT):
    a. status="enough" when sufficient detail for ONE actionable issue.
    b. status="not_enough" when critical gaps remain. Provide ONE conversational clarificationRequest — ask like a colleague, not a form.
    c. When status="not_enough", return a minimal object with only: status, reason, clarificationRequest, suggestedIssueType (or null), missingSections (array). Do not invent title/description/fields.
+   d. status="suggest_split" ONLY when the input genuinely contains 2+ distinct, unrelated tasks that cannot be meaningfully combined into one ticket. This should be rare — prefer combining related work into one issue. When suggesting a split, return: status, reason (explain WHY splitting is better), and proposedTasks (array of {title, issueType, scope, reason} summaries). The user will confirm before you generate the full tickets.
 3. Title format: "[PREFIX]: concise summary" (≤ 100 chars). PREFIX is provided in the user prompt (e.g., UI, API, or UI+API). Also set the separate JSON field "scope" to the primary lowercase scope.
 4. Description MUST include ALL sections for the chosen issueType in the exact order & headings from the guide. For checklist items render as Markdown checkboxes: "- [ ] ...".
 5. acceptanceCriteria array MUST mirror testable outcomes (binary, verifiable) separate from Markdown checkboxes. Do not include numbering here.
 6. Keep clarification requests conversational and friendly. A touch of wit in reason is fine.
 7. Do not speculate. If a technical detail is unclear (e.g., endpoint path, data model), ask for it instead of guessing.
-8. If input bundles several distinct tasks that cannot be merged cleanly: either status="not_enough" OR set multiItem=true with a unified description (avoid losing details).
+8. If input bundles several distinct tasks that cannot be merged cleanly: use status="suggest_split" to propose splitting them. Only do this when the tasks are genuinely unrelated (e.g., a bug fix AND a new feature). Related sub-tasks should stay as one ticket.
 9. For bugs: reproduction steps are strongly preferred. If no repro steps are provided, ask for them (status="not_enough") UNLESS the user explicitly indicates they do not know / cannot reproduce / client-specific and unreproducible; in that case proceed with status="enough" and write "Unknown" (or equivalent) in the "Steps to Reproduce" section plus a brief note about next diagnostic steps (e.g., add logging/telemetry, capture environment info).
 10. For spikes: must include timebox/estimate or ask for it.
 11. For epics: include at least two child issue placeholder lines under the appropriate section.
@@ -60,6 +61,10 @@ Field definitions (status="not_enough" path):
 - clarificationRequest: string
 - suggestedIssueType: one of {{ISSUE_TYPE_PROMPT_VALUES}} or null
 - missingSections: string[] (use exact section titles from the guide when applicable)
+
+Field definitions (status="suggest_split" path):
+- reason: string (explain why these should be separate tickets)
+- proposedTasks: array of objects, each with: title (string), issueType (one of {{ISSUE_TYPE_PROMPT_VALUES}}), scope (string), reason (string, one sentence why it's separate)
 
 FINAL INSTRUCTIONS:
 - Return ONLY the JSON object per above; no backticks, no commentary.

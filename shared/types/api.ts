@@ -44,7 +44,7 @@ export interface PromptRequest {
   currentDraft?: PromptDraftData | null
 }
 
-export type PromptStatus = 'done' | 'needs_info' | 'error'
+export type PromptStatus = 'done' | 'needs_info' | 'suggest_split' | 'error'
 
 export interface PromptResponseDone extends PromptDraftData {
   status: 'done'
@@ -56,16 +56,29 @@ export interface PromptResponseNeedsInfo {
   missingInfoPrompt?: string
 }
 
+export interface SplitTaskSummary {
+  title: string
+  issueType: IssueType
+  scope: string
+  reason: string
+}
+
+export interface PromptResponseSuggestSplit {
+  status: 'suggest_split'
+  reason: string
+  proposedTasks: SplitTaskSummary[]
+}
+
 export interface PromptResponseError {
   status: 'error'
   reason?: string
 }
 
-export type PromptResponse = PromptResponseDone | PromptResponseNeedsInfo | PromptResponseError
+export type PromptResponse = PromptResponseDone | PromptResponseNeedsInfo | PromptResponseSuggestSplit | PromptResponseError
 
 export type ConversationMessageRole = 'user' | 'assistant'
 
-export type ConversationMessageKind = 'prompt' | 'clarification' | 'draft' | 'error'
+export type ConversationMessageKind = 'prompt' | 'clarification' | 'draft' | 'error' | 'suggest_split'
 
 export interface ConversationMessage {
   id: string
@@ -76,6 +89,7 @@ export interface ConversationMessage {
   reason?: string
   draft?: PromptDraftData
   isCurrentDraft?: boolean
+  proposedTasks?: SplitTaskSummary[]
 }
 
 /**

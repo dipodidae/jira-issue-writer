@@ -36,6 +36,15 @@ function createEmptySession(): ConversationSession {
   }
 }
 
+// Replace a session immutably so the top-level ref triggers persistence
+function replaceSession(
+  list: ConversationSession[],
+  id: string,
+  updater: (s: ConversationSession) => ConversationSession,
+): ConversationSession[] {
+  return list.map(s => s.id === id ? updater(s) : s)
+}
+
 export const useConversationStore = defineStore('conversations', () => {
   const sessions = ref<ConversationSession[]>([createEmptySession()])
   const activeSessionId = ref<string>(sessions.value[0].id)
@@ -48,7 +57,13 @@ export const useConversationStore = defineStore('conversations', () => {
   const latestDraft = computed(() => activeSession.value.latestDraft)
   const pinnedContext = computed({
     get: () => activeSession.value.pinnedContext,
-    set: (val: string) => { activeSession.value.pinnedContext = val },
+    set: (val: string) => {
+      sessions.value = replaceSession(sessions.value, activeSessionId.value, s => ({
+        ...s,
+        pinnedContext: val,
+        updatedAt: Date.now(),
+      }))
+    },
   })
   const currentStage = computed(() => activeSession.value.currentStage)
   const hasMessages = computed(() => activeSession.value.messages.length > 0)
@@ -64,14 +79,16 @@ export const useConversationStore = defineStore('conversations', () => {
   })
 
   function updateSession(patch: Partial<ConversationSession>) {
-    const session = sessions.value.find(s => s.id === activeSessionId.value)
-    if (session)
-      Object.assign(session, { ...patch, updatedAt: Date.now() })
+    sessions.value = replaceSession(sessions.value, activeSessionId.value, s => ({
+      ...s,
+      ...patch,
+      updatedAt: Date.now(),
+    }))
   }
 
   function createSession() {
     const session = createEmptySession()
-    sessions.value.push(session)
+    sessions.value = [...sessions.value, session]
     activeSessionId.value = session.id
   }
 
@@ -82,60 +99,56 @@ export const useConversationStore = defineStore('conversations', () => {
   }
 
   function deleteSession(id: string) {
-    const idx = sessions.value.findIndex(s => s.id === id)
-    if (idx === -1)
-      return
-
-    sessions.value.splice(idx, 1)
-
-    if (sessions.value.length === 0) {
+    const filtered = sessions.value.filter(s => s.id !== id)
+    if (filtered.length === 0) {
       const fresh = createEmptySession()
-      sessions.value.push(fresh)
+      sessions.value = [fresh]
       activeSessionId.value = fresh.id
     }
-    else if (activeSessionId.value === id) {
-      activeSessionId.value = sessions.value[0].id
+    else {
+      sessions.value = filtered
+      if (activeSessionId.value === id) {
+        activeSessionId.value = filtered[0].id
+      }
     }
   }
 
   function resetActiveSession() {
-    const session = sessions.value.find(s => s.id === activeSessionId.value)
-    if (session) {
-      Object.assign(session, {
-        messages: [],
-        latestDraft: null,
-        originalPrompt: '',
-        previousClarifications: [],
-        currentStage: 'initial' as PromptStage,
-        pinnedContext: '',
-        title: 'New draft',
-        updatedAt: Date.now(),
-      })
-    }
+    sessions.value = replaceSession(sessions.value, activeSessionId.value, s => ({
+      ...s,
+      messages: [],
+      latestDraft: null,
+      originalPrompt: '',
+      previousClarifications: [],
+      currentStage: 'initial' as PromptStage,
+      pinnedContext: '',
+      title: 'New draft',
+      updatedAt: Date.now(),
+    }))
   }
 
   function pushMessage(message: ConversationMessage) {
-    const session = sessions.value.find(s => s.id === activeSessionId.value)
-    if (!session)
-      return
-    session.messages = [...session.messages, message]
-    session.updatedAt = Date.now()
-
-    // Auto-title from first user message
-    if (session.title === 'New draft' && message.role === 'user') {
-      session.title = message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
-    }
+    sessions.value = replaceSession(sessions.value, activeSessionId.value, (s) => {
+      const title = s.title === 'New draft' && message.role === 'user'
+        ? message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
+        : s.title
+      return {
+        ...s,
+        messages: [...s.messages, message],
+        title,
+        updatedAt: Date.now(),
+      }
+    })
   }
 
   function markPreviousDraftsAsHistory() {
-    const session = sessions.value.find(s => s.id === activeSessionId.value)
-    if (!session)
-      return
-    session.messages = session.messages.map((msg) => {
-      if (msg.kind !== 'draft')
-        return msg
-      return { ...msg, isCurrentDraft: false }
-    })
+    sessions.value = replaceSession(sessions.value, activeSessionId.value, s => ({
+      ...s,
+      messages: s.messages.map(msg =>
+        msg.kind === 'draft' ? { ...msg, isCurrentDraft: false } : msg,
+      ),
+      updatedAt: Date.now(),
+    }))
   }
 
   return {

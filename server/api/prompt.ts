@@ -342,6 +342,19 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
       })
     }
 
+    if (parsed.status === 'suggest_split' && Array.isArray(parsed.proposedTasks)) {
+      return {
+        status: 'suggest_split',
+        reason: parsed.reason || 'This looks like it should be multiple tickets.',
+        proposedTasks: parsed.proposedTasks.map((t: any) => ({
+          title: String(t.title || ''),
+          issueType: normalizeIssueType(t.issueType) || 'task',
+          scope: String(t.scope || 'ui'),
+          reason: String(t.reason || ''),
+        })),
+      }
+    }
+
     if (parsed.status === 'not_enough') {
       // Attempt enhanced not_enough parsing for potential richer clarification.
       const enhanced = parseIssueGenerationResult(parsed)

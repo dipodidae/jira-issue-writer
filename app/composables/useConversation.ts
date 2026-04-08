@@ -138,6 +138,23 @@ export function useConversation() {
       return
     }
 
+    if (response.status === 'suggest_split') {
+      errorMessage.value = null
+      store.pushMessage({
+        id: createMessageId(),
+        role: 'assistant',
+        kind: 'suggest_split',
+        content: response.reason,
+        proposedTasks: response.proposedTasks,
+        createdAt: Date.now(),
+      })
+      toast.add({
+        title: 'Split suggested',
+        color: 'info',
+      })
+      return
+    }
+
     if (response.status === 'needs_info') {
       const clarificationPrompt = response.missingInfoPrompt || 'What additional details would clarify the issue?'
       store.updateSession({
