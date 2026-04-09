@@ -13,7 +13,8 @@ const articleRef = useTemplateRef('articleRef')
       ref="articleRef"
       :value="props.markdown"
       tag="article"
-      class="prose prose-sm dark:prose-invert relative z-0 max-w-none rounded-md border border-(--border-default) bg-(--surface-elevated) p-4"
+      class="prose prose-sm dark:prose-invert relative z-0 max-w-none rounded-lg border border-(--border-subtle) bg-(--surface-elevated) p-4"
+      style="box-shadow: var(--shadow-card)"
     />
   </div>
 </template>

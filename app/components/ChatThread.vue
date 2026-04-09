@@ -43,14 +43,17 @@ const loadingPhrase = computed(() => loadingPhrases[Math.floor(Date.now() / 4000
 
 <template>
   <div ref="threadRef" class="overflow-y-auto">
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-3 px-5 py-4">
+    <div class="mx-auto flex w-full max-w-3xl flex-col gap-4 px-5 py-6">
       <template v-if="messages.length">
         <ChatMessage v-for="message in messages" :key="message.id" :message="message" />
 
         <div v-if="pending" class="flex items-start">
-          <div class="rounded-md border border-(--border-default) bg-(--surface-elevated) px-3 py-2 text-sm text-(--text-secondary)">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-loader-circle" class="text-primary-500 size-3.5 animate-spin" />
+          <div class="rounded-lg border border-(--border-subtle) bg-(--surface-translucent) px-4 py-2.5 text-sm text-(--text-muted)" style="box-shadow: var(--shadow-card)">
+            <div class="flex items-center gap-2.5">
+              <span class="relative flex size-4 items-center justify-center">
+                <span class="bg-primary-500/30 absolute inline-flex size-full animate-ping rounded-full" />
+                <span class="bg-primary-500 relative inline-flex size-2 rounded-full" />
+              </span>
               {{ loadingPhrase }}
             </div>
           </div>
@@ -58,14 +61,14 @@ const loadingPhrase = computed(() => loadingPhrases[Math.floor(Date.now() / 4000
       </template>
 
       <div v-else class="grid flex-1 place-items-center">
-        <div class="text-center">
-          <div class="bg-primary-500/8 text-primary-500 mx-auto flex size-12 items-center justify-center rounded-2xl">
-            <UIcon name="i-lucide-messages-square" class="size-6" />
+        <div class="max-w-xs text-center">
+          <div class="bg-primary-500/6 mx-auto flex size-14 items-center justify-center rounded-2xl ring-1 ring-(--border-subtle)">
+            <UIcon name="i-lucide-messages-square" class="text-primary-500/70 size-7" />
           </div>
-          <p class="mt-3 text-base font-semibold tracking-tight text-(--text-primary)">
+          <p class="mt-5 text-lg font-semibold tracking-[-0.02em] text-(--text-primary)">
             {{ emptyState.heading }}
           </p>
-          <p class="mt-1 text-xs text-(--text-muted)">
+          <p class="mt-1.5 text-sm leading-relaxed text-(--text-muted)">
             {{ emptyState.sub }}
           </p>
         </div>

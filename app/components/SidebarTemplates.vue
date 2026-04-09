@@ -18,14 +18,14 @@ const templates = [
       <button
         v-for="t in templates"
         :key="t.label"
-        class="group hover:border-primary-500/30 flex flex-col items-start gap-0.5 rounded-md border border-(--border-default) bg-(--surface-elevated) px-2.5 py-2 text-left transition-all duration-150 hover:translate-y-[-1px] hover:shadow-[0_2px_8px_rgba(94,106,210,0.1)]"
+        class="group flex flex-col items-start gap-1 rounded-lg border border-(--border-subtle) bg-(--surface-translucent) px-2.5 py-2 text-left transition-all duration-150 hover:border-(--border-default) hover:bg-(--surface-elevated)"
         @click="emit('select', t.text)"
       >
         <div class="flex items-center gap-1.5">
-          <UIcon :name="t.icon" class="text-primary-500/60 group-hover:text-primary-500 size-3 shrink-0 transition-colors" />
+          <UIcon :name="t.icon" class="group-hover:text-primary-500 size-3 shrink-0 text-(--text-muted) transition-colors" />
           <span class="text-xs font-medium text-(--text-secondary) group-hover:text-(--text-primary)">{{ t.label }}</span>
         </div>
-        <span class="text-[10px] text-(--text-muted)">{{ t.sub }}</span>
+        <span class="text-[10px] leading-snug text-(--text-quaternary)">{{ t.sub }}</span>
       </button>
     </div>
   </div>

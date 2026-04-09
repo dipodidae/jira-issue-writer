@@ -18,7 +18,10 @@ const {
 
     <div class="mx-auto w-full max-w-3xl shrink-0">
       <div v-if="errorMessage && hasMessages" class="px-5 pb-2">
-        <UAlert color="error" variant="subtle" :title="errorMessage" icon="i-lucide-alert-circle" />
+        <div class="flex items-center gap-2.5 rounded-xl border border-red-500/15 bg-red-500/5 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+          <UIcon name="i-lucide-alert-circle" class="size-4 shrink-0" />
+          <span class="flex-1">{{ errorMessage }}</span>
+        </div>
       </div>
 
       <ChatInputBar

@@ -28,15 +28,17 @@ function formatTime(ts: number) {
       <div
         v-for="session in sessions"
         :key="session.id"
-        class="group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors"
-        :class="session.id === activeId ? 'bg-(--surface-elevated) text-(--text-primary)' : 'text-(--text-muted) hover:text-(--text-secondary)'"
+        class="group flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-150"
+        :class="session.id === activeId
+          ? 'bg-(--surface-elevated) text-(--text-primary) ring-1 ring-(--border-subtle)'
+          : 'text-(--text-muted) hover:bg-(--surface-translucent) hover:text-(--text-secondary)'"
         @click="emit('switch', session.id)"
       >
         <span class="flex-1 truncate">{{ session.title }}</span>
-        <span class="shrink-0 text-[10px] tabular-nums">{{ formatTime(session.updatedAt) }}</span>
+        <span class="shrink-0 text-[10px] text-(--text-quaternary) tabular-nums">{{ formatTime(session.updatedAt) }}</span>
         <button
           v-if="sessions.length > 1"
-          class="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          class="shrink-0 rounded p-0.5 opacity-0 transition-all group-hover:opacity-100 hover:bg-(--surface-elevated)"
           @click.stop="emit('delete', session.id)"
         >
           <UIcon name="i-lucide-x" class="size-3 text-(--text-muted) hover:text-(--text-primary)" />

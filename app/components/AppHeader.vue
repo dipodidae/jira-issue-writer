@@ -7,8 +7,8 @@ const { toggle: toggleSidebar } = useMobileSidebar()
 
 <template>
   <header class="z-50 border-b border-(--border-subtle) bg-(--surface-panel)">
-    <div class="flex h-11 items-center justify-between px-4">
-      <div class="flex items-center gap-2">
+    <div class="flex h-12 items-center justify-between px-4">
+      <div class="flex items-center gap-2.5">
         <UButton
           icon="i-lucide-menu"
           variant="ghost"
@@ -17,13 +17,12 @@ const { toggle: toggleSidebar } = useMobileSidebar()
           class="md:hidden"
           @click="toggleSidebar"
         />
-        <div class="bg-primary-500/10 relative flex size-6 items-center justify-center rounded-md">
-          <div class="bg-primary-500/20 absolute inset-0 animate-pulse rounded-md blur-sm" />
-          <UIcon name="i-lucide-sparkles" class="text-primary-500 relative size-3.5" />
+        <div class="bg-primary-500/10 ring-primary-500/20 relative flex size-7 items-center justify-center rounded-lg ring-1">
+          <UIcon name="i-lucide-sparkles" class="text-primary-500 relative size-4" />
         </div>
-        <span class="text-sm font-semibold tracking-[-0.03em] text-(--text-primary)">{{ appName }}</span>
+        <span class="text-sm font-semibold tracking-[-0.02em] text-(--text-primary)">{{ appName }}</span>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-0.5">
         <UButton
           icon="i-lucide-info"
           variant="ghost"
@@ -52,13 +51,13 @@ const { toggle: toggleSidebar } = useMobileSidebar()
       </template>
 
       <template #body>
-        <div class="space-y-4 text-sm text-(--text-secondary)">
+        <div class="space-y-4 text-sm leading-relaxed text-(--text-secondary)">
           <p>
             AI-powered tool that turns messy problem descriptions into structured, ready-to-file Jira issues through a conversational interface.
           </p>
 
           <div>
-            <h4 class="mb-1.5 text-xs font-medium tracking-wider text-(--text-muted) uppercase">
+            <h4 class="mb-1.5 text-[11px] font-medium tracking-wider text-(--text-muted) uppercase">
               How to use
             </h4>
             <ol class="list-inside list-decimal space-y-1">
@@ -70,7 +69,7 @@ const { toggle: toggleSidebar } = useMobileSidebar()
           </div>
 
           <div>
-            <h4 class="mb-1.5 text-xs font-medium tracking-wider text-(--text-muted) uppercase">
+            <h4 class="mb-1.5 text-[11px] font-medium tracking-wider text-(--text-muted) uppercase">
               Tips
             </h4>
             <ul class="list-inside list-disc space-y-1">
@@ -83,16 +82,16 @@ const { toggle: toggleSidebar } = useMobileSidebar()
           </div>
 
           <div>
-            <h4 class="mb-1.5 text-xs font-medium tracking-wider text-(--text-muted) uppercase">
+            <h4 class="mb-1.5 text-[11px] font-medium tracking-wider text-(--text-muted) uppercase">
               Keyboard shortcuts
             </h4>
             <div class="flex gap-6">
               <div class="flex items-center gap-2">
-                <kbd class="rounded border border-(--border-default) bg-(--surface-elevated) px-1.5 py-0.5 font-mono text-[10px] text-(--text-muted)">Enter</kbd>
+                <kbd class="rounded-md border border-(--border-default) bg-(--surface-elevated) px-1.5 py-0.5 font-mono text-[10px] text-(--text-muted)">Enter</kbd>
                 <span>Send message</span>
               </div>
               <div class="flex items-center gap-2">
-                <kbd class="rounded border border-(--border-default) bg-(--surface-elevated) px-1.5 py-0.5 font-mono text-[10px] text-(--text-muted)">Shift+Enter</kbd>
+                <kbd class="rounded-md border border-(--border-default) bg-(--surface-elevated) px-1.5 py-0.5 font-mono text-[10px] text-(--text-muted)">Shift+Enter</kbd>
                 <span>New line</span>
               </div>
             </div>
