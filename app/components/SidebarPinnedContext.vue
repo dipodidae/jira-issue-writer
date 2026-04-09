@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const model = defineModel<string>({ default: '' })
-const isExpanded = ref(false)
+const isExpanded = shallowRef(false)
 
 const hasContent = computed(() => model.value.trim().length > 0)
 const previewText = computed(() => {

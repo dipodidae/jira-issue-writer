@@ -3,7 +3,7 @@ const props = defineProps<{
   markdown: string
 }>()
 
-const articleRef = ref<HTMLElement | null>(null)
+const articleRef = useTemplateRef('articleRef')
 </script>
 
 <template>

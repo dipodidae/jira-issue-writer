@@ -6,7 +6,7 @@ const props = defineProps<{
   pending?: boolean
 }>()
 
-const threadRef = ref<HTMLDivElement | null>(null)
+const threadRef = useTemplateRef<HTMLDivElement>('threadRef')
 
 watch(
   () => [props.messages.length, props.pending],

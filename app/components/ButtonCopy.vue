@@ -8,7 +8,7 @@ const props = defineProps<{
   richSource?: HTMLElement | RichSourceElement | null
 }>()
 
-const copied = ref(false)
+const copied = shallowRef(false)
 
 async function copyContent() {
   try {

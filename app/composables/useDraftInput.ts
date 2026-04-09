@@ -1,8 +1,8 @@
 import { MESSAGE_KIND, STAGE } from '~/constants'
 
-const draftInput = ref('')
-const errorMessage = ref<string | null>(null)
-const isPending = ref(false)
+const draftInput = shallowRef('')
+const errorMessage = shallowRef<string | null>(null)
+const isPending = shallowRef(false)
 
 export function useDraftInput() {
   const store = useConversationStore()

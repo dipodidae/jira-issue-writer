@@ -8,7 +8,7 @@ const emit = defineEmits<{ submit: [clarification: string] }>()
 
 const open = defineModel<boolean>('open', { default: false })
 
-const userClarification = ref('')
+const userClarification = shallowRef('')
 
 watch(() => open.value, (isOpen) => {
   if (isOpen)

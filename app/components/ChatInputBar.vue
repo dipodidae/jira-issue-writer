@@ -11,7 +11,6 @@ const emit = defineEmits<{
 }>()
 
 const model = defineModel<string>({ default: '' })
-const isFocused = ref(false)
 
 const submitDisabled = computed(() => props.pending || props.disabled || model.value.trim().length === 0)
 
@@ -37,8 +36,6 @@ const handleKeydown = useSubmitOnEnter(() => handleSubmit())
         :ui="{
           base: 'max-h-32 rounded-lg border border-(--border-default) bg-(--surface-elevated) px-3 py-2 text-sm leading-snug text-(--text-primary) placeholder:text-(--text-muted) focus:border-primary-500/40 focus:ring-0 transition-colors',
         }"
-        @focus="isFocused = true"
-        @blur="isFocused = false"
         @keydown="handleKeydown"
       />
       <UButton

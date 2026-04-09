@@ -48,7 +48,7 @@ function replaceSession(
 
 export const useConversationStore = defineStore('conversations', () => {
   const sessions = ref<ConversationSession[]>([createEmptySession()])
-  const activeSessionId = ref<string>(sessions.value[0]!.id)
+  const activeSessionId = shallowRef<string>(sessions.value[0]!.id)
 
   const activeSession = computed((): ConversationSession => {
     return sessions.value.find(s => s.id === activeSessionId.value) ?? sessions.value[0]!

@@ -17,7 +17,7 @@ const {
   switchSession,
 } = useConversation()
 
-const isHydrated = ref(false)
+const isHydrated = shallowRef(false)
 onMounted(() => {
   isHydrated.value = true
 })
