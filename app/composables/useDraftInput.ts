@@ -3,6 +3,7 @@ import { MESSAGE_KIND, STAGE } from '~/constants'
 const draftInput = shallowRef('')
 const errorMessage = shallowRef<string | null>(null)
 const isPending = shallowRef(false)
+const pendingImage = shallowRef<string | null>(null)
 
 export function useDraftInput() {
   const store = useConversationStore()
@@ -45,6 +46,7 @@ export function useDraftInput() {
 
   function clearInput() {
     draftInput.value = ''
+    pendingImage.value = null
   }
 
   function clearError() {
@@ -66,6 +68,7 @@ export function useDraftInput() {
     draftInput,
     errorMessage,
     isPending,
+    pendingImage,
     hasMessages,
     canReset,
     canSubmit,

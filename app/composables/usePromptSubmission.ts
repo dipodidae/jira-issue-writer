@@ -58,6 +58,7 @@ export function usePromptSubmission() {
   const {
     draftInput,
     isPending,
+    pendingImage,
     createMessageId,
     clearInput,
     clearError,
@@ -190,20 +191,24 @@ export function usePromptSubmission() {
 
   async function submitCurrentMessage() {
     const messageText = draftInput.value.trim()
-    if (!messageText || isPending.value)
+    const imageUrl = pendingImage.value
+    if ((!messageText && !imageUrl) || isPending.value)
       return
 
     store.pushMessage({
       id: createMessageId(),
       role: 'user',
       kind: MESSAGE_KIND.PROMPT,
-      content: messageText,
+      content: messageText || '(image)',
       createdAt: Date.now(),
+      imageUrl: imageUrl ?? undefined,
     })
 
     clearInput()
     clearError()
-    const requestBody = buildRequestBody(messageText)
+    const requestBody = buildRequestBody(messageText || '(see attached image)')
+    if (imageUrl)
+      requestBody.imageUrl = imageUrl
 
     isPending.value = true
     loadingIndicator.start()

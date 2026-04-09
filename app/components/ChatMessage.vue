@@ -32,6 +32,7 @@ const timestamp = computed(() => {
             : 'border border-(--border-default) bg-(--surface-elevated) text-(--text-primary)',
       ]"
     >
+      <img v-if="message.imageUrl" :src="message.imageUrl" alt="Attached image" class="mb-1.5 max-h-48 rounded object-contain">
       <p class="leading-relaxed whitespace-pre-wrap">
         {{ message.content }}
       </p>

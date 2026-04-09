@@ -6,6 +6,7 @@ export function useConversation() {
     draftInput,
     errorMessage,
     isPending,
+    pendingImage,
     hasMessages,
     canReset,
     canSubmit,
@@ -35,6 +36,7 @@ export function useConversation() {
     errorMessage,
     hasMessages,
     isPending,
+    pendingImage,
     latestDraft: computed(() => store.latestDraft),
     messages: computed(() => store.messages),
     pinnedContext: computed({

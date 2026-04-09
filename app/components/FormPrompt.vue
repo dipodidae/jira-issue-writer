@@ -6,6 +6,7 @@ const {
   errorMessage,
   hasMessages,
   isPending,
+  pendingImage,
   messages,
   submitCurrentMessage,
 } = useConversation()
@@ -22,6 +23,7 @@ const {
 
       <ChatInputBar
         v-model="draftInput"
+        v-model:image="pendingImage"
         :pending="isPending"
         :placeholder="composerPlaceholder"
         :hint="composerHint"

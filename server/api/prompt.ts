@@ -369,9 +369,16 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     const client = getOpenAIClient(apiKey)
     const model = body.agent ?? 'gpt-4o-mini'
 
-    const userContent = stage === 'refine'
+    const userText = stage === 'refine'
       ? buildRefinementContext(text, ensureDraft(body.currentDraft), scope, body.originalPrompt, clarifications)
       : buildIssueContext(appendClarifications(text, clarifications), scope)
+
+    const userContent: ChatMessage['content'] = body.imageUrl
+      ? [
+          { type: 'text', text: userText },
+          { type: 'image_url', image_url: { url: body.imageUrl, detail: 'auto' } },
+        ]
+      : userText
     const messages: ChatMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },

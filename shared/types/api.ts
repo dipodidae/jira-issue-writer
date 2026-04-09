@@ -43,6 +43,7 @@ export interface PromptRequest {
   stage?: PromptStage
   currentDraft?: PromptDraftData | null
   originalPrompt?: string
+  imageUrl?: string
 }
 
 export type PromptStatus = 'done' | 'needs_info' | 'suggest_split' | 'error'
@@ -91,6 +92,7 @@ export interface ConversationMessage {
   draft?: PromptDraftData
   isCurrentDraft?: boolean
   proposedTasks?: SplitTaskSummary[]
+  imageUrl?: string
 }
 
 /**
