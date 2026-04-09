@@ -148,18 +148,30 @@ function buildIssueContext(context: string, scope: string[]) {
   return buildIssuePrompt({ context, scopeDetails: details, prefix })
 }
 
-function buildRefinementContext(request: string, currentDraft: PromptDraftData, scope: string[]) {
+function buildRefinementContext(
+  request: string,
+  currentDraft: PromptDraftData,
+  scope: string[],
+  originalPrompt?: string,
+  clarifications?: string[],
+) {
   const normalizedScope = scope.length ? scope : [currentDraft.scope || 'ui']
   const prefix = normalizedScope.map(s => s.toUpperCase()).join('+')
   const details = normalizedScope
     .map(s => `- ${s.toUpperCase()}: ${SCOPE_DESCRIPTIONS.get(s) || 'General scope.'}`)
     .join('\n')
 
+  const conversationHistory = clarifications?.length
+    ? clarifications.map((c, i) => `${i + 1}. ${c}`).join('\n')
+    : undefined
+
   return buildRefinementPrompt({
     currentDraft: JSON.stringify(currentDraft, null, 2),
     request,
     scopeDetails: details,
     prefix,
+    originalContext: originalPrompt,
+    conversationHistory,
   })
 }
 
@@ -358,7 +370,7 @@ export default defineEventHandler(async (event): Promise<PromptResponse> => {
     const model = body.agent ?? 'gpt-4o-mini'
 
     const userContent = stage === 'refine'
-      ? buildRefinementContext(text, ensureDraft(body.currentDraft), scope)
+      ? buildRefinementContext(text, ensureDraft(body.currentDraft), scope, body.originalPrompt, clarifications)
       : buildIssueContext(appendClarifications(text, clarifications), scope)
     const messages: ChatMessage[] = [
       { role: 'system', content: SYSTEM_PROMPT },

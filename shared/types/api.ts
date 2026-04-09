@@ -42,6 +42,7 @@ export interface PromptRequest {
   previousClarifications?: string[]
   stage?: PromptStage
   currentDraft?: PromptDraftData | null
+  originalPrompt?: string
 }
 
 export type PromptStatus = 'done' | 'needs_info' | 'suggest_split' | 'error'

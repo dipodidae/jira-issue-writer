@@ -169,6 +169,8 @@ export function usePromptSubmission() {
         scope: prefs.selectedScope,
         stage,
         currentDraft: session.latestDraft,
+        originalPrompt: session.originalPrompt,
+        previousClarifications: session.previousClarifications,
       }
     }
 

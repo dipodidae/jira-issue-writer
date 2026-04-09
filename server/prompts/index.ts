@@ -37,12 +37,25 @@ export function buildIssuePrompt(values: { context: string, scopeDetails: string
   })
 }
 
-export function buildRefinementPrompt(values: { currentDraft: string, request: string, scopeDetails: string, prefix: string }) {
+export function buildRefinementPrompt(values: {
+  currentDraft: string
+  request: string
+  scopeDetails: string
+  prefix: string
+  originalContext?: string
+  conversationHistory?: string
+}) {
   return renderTemplate(refineTemplate, {
     CURRENT_DRAFT: values.currentDraft,
     REQUEST: values.request,
     SCOPE_DETAILS: values.scopeDetails,
     PREFIX: values.prefix,
+    ORIGINAL_CONTEXT: values.originalContext
+      ? `\nOriginal user input (for background context only):\n${values.originalContext}\n`
+      : '',
+    CONVERSATION_HISTORY: values.conversationHistory
+      ? `\nPrevious conversation:\n${values.conversationHistory}\n`
+      : '',
   })
 }
 
