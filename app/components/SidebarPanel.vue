@@ -17,14 +17,31 @@ const {
   switchSession,
 } = useConversation()
 
+const { close: closeMobileSidebar } = useMobileSidebar()
+
 const isHydrated = shallowRef(false)
 onMounted(() => {
   isHydrated.value = true
 })
+
+function handleTemplateSelect(text: string) {
+  setInput(text)
+  closeMobileSidebar()
+}
+
+function handleSwitchSession(id: string) {
+  switchSession(id)
+  closeMobileSidebar()
+}
+
+function handleCreateSession() {
+  createSession()
+  closeMobileSidebar()
+}
 </script>
 
 <template>
-  <aside class="flex min-h-0 flex-col gap-4 overflow-y-auto border-r border-(--border-subtle) bg-(--surface-panel) px-3 py-4">
+  <aside class="flex min-h-0 flex-col gap-4 overflow-y-auto border-r border-(--border-subtle) bg-(--surface-panel) px-3 pt-16 pb-4 md:pt-4">
     <div class="flex items-center gap-1.5 text-xs text-(--text-muted)">
       <span
         class="inline-flex size-1.5 rounded-full"
@@ -44,7 +61,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <SidebarTemplates v-if="isHydrated && !hasMessages" @select="setInput" />
+    <SidebarTemplates v-if="isHydrated && !hasMessages" @select="handleTemplateSelect" />
 
     <SidebarPinnedContext v-model="pinnedContext" />
 
@@ -56,7 +73,7 @@ onMounted(() => {
       v-if="isHydrated"
       :sessions="sessions"
       :active-id="activeSessionId"
-      @switch="switchSession"
+      @switch="handleSwitchSession"
       @delete="deleteSession"
     />
 
@@ -69,7 +86,7 @@ onMounted(() => {
         size="sm"
         block
         :disabled="isPending || (isHydrated && !canReset)"
-        @click="createSession"
+        @click="handleCreateSession"
       >
         New draft
       </UButton>
