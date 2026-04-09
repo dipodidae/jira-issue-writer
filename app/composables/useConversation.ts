@@ -59,6 +59,7 @@ export function useConversation() {
     createSession: () => {
       store.createSession()
       clearInput()
+      errorMessage.value = null
     },
     switchSession: (id: string) => {
       store.switchSession(id)

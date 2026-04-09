@@ -68,7 +68,7 @@ onMounted(() => {
         icon="i-lucide-plus"
         size="sm"
         block
-        :disabled="!canReset || isPending"
+        :disabled="isPending || (isHydrated && !canReset)"
         @click="createSession"
       >
         New draft
