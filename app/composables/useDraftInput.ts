@@ -8,7 +8,7 @@ export function useDraftInput() {
   const store = useConversationStore()
 
   const hasMessages = computed(() => store.hasMessages)
-  const canReset = computed(() => hasMessages.value || draftInput.value.trim().length > 0)
+  const canReset = computed(() => hasMessages.value || !!store.latestDraft || draftInput.value.trim().length > 0)
   const canSubmit = computed(() => draftInput.value.trim().length > 0 && !isPending.value)
 
   const composerPlaceholder = computed(() => {

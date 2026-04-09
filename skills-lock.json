@@ -6,6 +6,16 @@
       "sourceType": "github",
       "computedHash": "2c060290f90340e8bb6009502ec936b8ebb3ff889332a43e24bf210528ebba9f"
     },
+    "code-antipatterns-analysis": {
+      "source": "laurigates/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "097cd01da764e9095de75a9176fda22cff87c2d1e11ffe7ed9aa04704190b002"
+    },
+    "code-smell-detector": {
+      "source": "rysweet/amplihack",
+      "sourceType": "github",
+      "computedHash": "c225f62ccfc0dc6c70f0eea5ce18602329b04338fec18bea380c524f8bb09a69"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
@@ -25,6 +35,16 @@
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
       "computedHash": "0a413bf988d06481f69bb81df2070741c3ba12dd9f1be2706d57f259c905992d"
+    },
+    "vue": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "computedHash": "9c241141e07e836e4f0537c63e8f929fba3767c2997250be38e699f19b75e3f2"
+    },
+    "vue-best-practices": {
+      "source": "hyf0/vue-skills",
+      "sourceType": "github",
+      "computedHash": "3df585ad31aec78fe55c56c1411262737e6b231677a3153dec512a882fde80cd"
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",

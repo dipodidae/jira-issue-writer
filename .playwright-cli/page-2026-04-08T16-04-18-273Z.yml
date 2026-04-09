@@ -1,0 +1,40 @@
+- generic [ref=e1]:
+    - generic [ref=e3]:
+        - banner [ref=e4]:
+            - generic [ref=e5]:
+                - generic [ref=e9]: Jira Ticket Writer
+                - button "Switch to light mode" [active] [ref=e93]
+        - generic [ref=e12]:
+            - complementary [ref=e13]:
+                - generic [ref=e15]: Ready
+                - generic [ref=e17]:
+                    - generic [ref=e18]:
+                        - generic [ref=e19]: Scope
+                        - combobox [ref=e20]:
+                            - generic: ui
+                    - generic [ref=e24]:
+                        - generic [ref=e25]: Model
+                        - combobox [ref=e26]:
+                            - generic: GPT-5 Mini
+                - button "New draft" [disabled] [ref=e33]: New draft
+            - generic [ref=e35]:
+                - generic [ref=e38]:
+                    - paragraph [ref=e41]: Describe your issue below
+                    - paragraph [ref=e42]: Paste notes, answer follow-ups, refine until it's right.
+                - generic [ref=e44]:
+                    - generic [ref=e45]:
+                        - textbox "Describe the issue or feature..." [ref=e47]
+                        - button [disabled] [ref=e48]
+                    - generic [ref=e50]: Enter to send, Shift+Enter for newline
+    - region "Notifications (F8)":
+        - list
+    - generic:
+        - img
+    - generic [ref=e52]:
+        - img [ref=e53]
+        - img [ref=e55]
+        - img [ref=e58]
+        - generic:
+            - button "Unauthorized":
+                - generic:
+                    - generic: Unauthorized
